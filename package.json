@@ -1,0 +1,30 @@
+{
+    "name": "@_koii/namespaceWrapper",
+    "version": "1.0.0",
+    "description": "Koii Task Utility Package",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Koii Network",
+    "license": "ISC",
+    "devDependencies": {
+        "eslint": "^8.57.0",
+        "eslint-config-airbnb-base": "^15.0.0",
+        "eslint-plugin-import": "^2.29.1"
+    },
+    "dependencies": {
+        "@_koi/web3.js": "^0.0.6",
+        "axios": "^0.27.2",
+        "body-parser": "^1.20.2",
+        "cross-spawn": "^7.0.3",
+        "dotenv": "^16.3.0",
+        "dotenv-webpack": "^8.1.0",
+        "express": "^4.18.1",
+        "nedb-promises": "^6.2.1",
+        "node-cron": "^3.0.2",
+        "nodemon": "^3.1.0",
+        "request": "^2.88.2",
+        "tail": "^2.2.6"
+      }
+}
