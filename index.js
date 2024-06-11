@@ -7,6 +7,7 @@ const Datastore = require('nedb-promises');
 const fsPromises = require('fs/promises');
 const bs58 = require('bs58');
 const nacl = require('tweetnacl');
+const semver = require('semver');
 
 /** **************************************** init.js ********************************** */
 
@@ -48,7 +49,7 @@ const SECRET_KEY = process.argv[7];
 /**
  * This will be K2 url being used by the task node, possible values are 'https://k2-testnet.koii.live' | 'https://k2-devnet.koii.live' | 'http://localhost:8899'
  */
-const K2_NODE_URL = process.argv[8] || 'https://k2-testnet.koii.live';
+const K2_NODE_URL = process.argv[8] || "https://testnet.koii.network";
 /**
  * This will be public task node endpoint (Or local if it doesn't have any) of the task node running this task.
  */
@@ -734,109 +735,110 @@ class NamespaceWrapper {
     }
     return this.#testingTaskState;
   }
-
-  async validateAndVoteOnDistributionList(validateDistribution, round) {
-    // await this.checkVoteStatus();
-    console.log('******/  IN VOTING OF DISTRIBUTION LIST /******');
+  async validateAndVoteOnDistributionList(
+    validateDistribution,
+    round,
+    isPreviousRoundFailed = false
+  ) {
+    console.log("******/  IN VOTING OF DISTRIBUTION LIST /******");
+    let tasknodeVersionSatisfied = false;
+    const taskNodeVersion = await this.getTaskNodeVersion();
+    if (semver.gte(taskNodeVersion, "1.11.19")) {
+      tasknodeVersionSatisfied = true;
+    } 
     let taskAccountDataJSON = null;
     try {
       taskAccountDataJSON = await this.getTaskDistributionInfo(round);
     } catch (error) {
-      console.error('Error in getting distributions for the round', error);
+      console.error("Error in getting distributions for the round", error);
     }
     if (taskAccountDataJSON == null) {
-      console.log('No distribution submissions found for the round', round);
+      console.log("No distribution submissions found for the round", round);
       return;
     }
-    console.log(
-      `Fetching the Distribution submissions of round ${round}`,
-      taskAccountDataJSON.distribution_rewards_submission[round],
-    );
-    const submissions = taskAccountDataJSON?.distribution_rewards_submission[round];
+    const submissions =
+      taskAccountDataJSON?.distribution_rewards_submission[round];
     if (
-      submissions == null
-      || submissions == undefined
-      || submissions.length == 0
+      submissions == null ||
+      submissions == undefined ||
+      submissions.length == 0
     ) {
       console.log(`No submisssions found in round ${round}`);
       return `No submisssions found in round ${round}`;
-    }
-    const keys = Object.keys(submissions);
-    const values = Object.values(submissions);
-    const size = values.length;
-    console.log(
-      'Distribution Submissions from last round: ',
-      keys,
-      values,
-      size,
-    );
-    let isValid;
-    const submitterAccountKeyPair = await this.getSubmitterAccount();
-    const submitterPubkey = submitterAccountKeyPair.publicKey.toBase58();
-
-    for (let i = 0; i < size; i++) {
-      const candidatePublicKey = keys[i];
-      console.log('FOR CANDIDATE KEY', candidatePublicKey);
-      const candidateKeyPairPublicKey = new PublicKey(keys[i]);
-      if (candidatePublicKey == submitterPubkey) {
-        console.log('YOU CANNOT VOTE ON YOUR OWN DISTRIBUTION SUBMISSIONS');
-      } else {
+    } else {
+      const keys = Object.keys(submissions);
+      const values = Object.values(submissions);
+      const size = values.length;
+      let isValid;
+      const submitterAccountKeyPair = await this.getSubmitterAccount();
+      const submitterPubkey = submitterAccountKeyPair.publicKey.toBase58();
+      const selectedNode = await this.nodeSelectionDistributionList(
+        round,
+        isPreviousRoundFailed
+      );
+      console.log("SELECTED NODE FOR AUDIT", selectedNode);
+      if (selectedNode == submitterPubkey) {
+        console.log("YOU CANNOT VOTE ON YOUR OWN DISTRIBUTION SUBMISSIONS");
+        return;
+      }
+      for (let i = 0; i < size; i++) {
+        let candidatePublicKey = keys[i];
+        let candidateKeyPairPublicKey = new PublicKey(keys[i]);
         try {
-          console.log(
-            'DISTRIBUTION SUBMISSION VALUE TO CHECK',
-            values[i].submission_value,
-          );
+          console.log("VOTING ON DISTRIBUTION LIST");
           isValid = await validateDistribution(
             values[i].submission_value,
-            round,
+            round
           );
-          console.log(`Voting ${isValid} to ${candidatePublicKey}`);
 
           if (isValid) {
             // check for the submissions_audit_trigger , if it exists then vote true on that otherwise do nothing
-            const distributions_audit_trigger = taskAccountDataJSON.distributions_audit_trigger[round];
-            console.log(
-              'SUBMIT DISTRIBUTION AUDIT TRIGGER',
-              distributions_audit_trigger,
-            );
-            // console.log(
-            //   "CANDIDATE PUBKEY CHECK IN AUDIT TRIGGER",
-            //   distributions_audit_trigger[candidatePublicKey]
-            // );
+            const distributions_audit_trigger =
+              taskAccountDataJSON.distributions_audit_trigger[round];
             if (
-              distributions_audit_trigger
-                && distributions_audit_trigger[candidatePublicKey]
+              distributions_audit_trigger &&
+              distributions_audit_trigger[candidatePublicKey]
             ) {
-              console.log('VOTING TRUE ON DISTRIBUTION AUDIT');
+              console.log("VOTING TRUE ON DISTRIBUTION AUDIT");
               const response = await this.distributionListAuditSubmission(
                 candidateKeyPairPublicKey,
                 isValid,
                 submitterAccountKeyPair,
-                round,
+                round
               );
               console.log(
-                'RESPONSE FROM DISTRIBUTION AUDIT FUNCTION',
-                response,
+                "RESPONSE FROM DISTRIBUTION AUDIT FUNCTION",
+                response
               );
             }
-          } else if (isValid == false) {
+          } else if (isValid == false && tasknodeVersionSatisfied) {
             // Call auditSubmission function and isValid is passed as false
-            console.log('RAISING AUDIT / VOTING FALSE ON DISTRIBUTION');
+            console.log("RAISING AUDIT / VOTING FALSE ON DISTRIBUTION");
             const response = await this.distributionListAuditSubmission(
               candidateKeyPairPublicKey,
               isValid,
               submitterAccountKeyPair,
-              round,
+              round
             );
-            console.log(
-              'RESPONSE FROM DISTRIBUTION AUDIT FUNCTION',
-              response,
-            );
+            console.log("RESPONSE FROM DISTRIBUTION AUDIT FUNCTION", response);
           }
         } catch (err) {
-          console.log('ERROR IN ELSE CONDITION FOR DISTRIBUTION', err);
+          console.log("ERROR IN ELSE CONDITION FOR DISTRIBUTION", err);
         }
       }
+    }
+  }
+
+  async getTaskNodeVersion() {
+    if (taskNodeAdministered) {
+      try {
+        return await genericHandler("getTaskNodeVersion");
+      } catch (error) {
+        console.error("Error getting task node version", error);
+        return;
+      }
+    } else {
+      return "1.11.19";
     }
   }
 
@@ -1085,19 +1087,27 @@ class NamespaceWrapper {
 
 async function genericHandler(...args) {
   try {
-    const response = await axios.post(BASE_ROOT_URL, {
+    let response = await axios.post(BASE_ROOT_URL, {
       args,
       taskId: TASK_ID,
       secret: SECRET_KEY,
     });
     if (response.status == 200) return response.data.response;
-
-    console.error(response.status, response.data);
-    return null;
+    else {
+      console.error(response.status, response.data);
+      return null;
+    }
   } catch (err) {
-    console.error(`Error in genericHandler: "${args[0]}"`, err.message);
-    console.error(err?.response?.data);
-    return { error: err };
+    const responseData = err?.response?.data?.message;
+    if ((args[0] === 'getTaskSubmissionInfo' || args[0] === 'getTaskDistributionInfo') && 
+    responseData && typeof responseData === 'string' && responseData.includes('Task does not have any')) {
+      console.log(`Error in genericHandler: "${args[0]}"`, err.message);
+      console.log(err?.response?.data);
+    }else{
+      console.error(`Error in genericHandler: "${args[0]}"`, err.message);
+      console.error(err?.response?.data);
+      return { error: err };
+    }
   }
 }
 
