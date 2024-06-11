@@ -623,13 +623,14 @@ class NamespaceWrapper {
     return this.#testingDistributionList[round][submissionValAcc];
   }
 
-  async getTaskSubmissionInfo(round) {
+  async getTaskSubmissionInfo(round, forcefetch = false) {
     if (taskNodeAdministered) {
       const taskSubmissionInfo = await genericHandler(
         'getTaskSubmissionInfo',
         round,
+        forcefetch
       );
-      if (taskSubmissionInfo.error) {
+      if (!taskSubmissionInfo || taskSubmissionInfo.error) {
         return null;
       }
       return taskSubmissionInfo;
@@ -726,7 +727,7 @@ class NamespaceWrapper {
         'getTaskDistributionInfo',
         round,
       );
-      if (taskDistributionInfo.error) {
+      if (!taskDistributionInfo || taskDistributionInfo.error) {
         return null;
       }
       return taskDistributionInfo;
@@ -873,7 +874,7 @@ class NamespaceWrapper {
   async nodeSelectionDistributionList(round, isPreviousFailed) {
     let taskAccountDataJSON = null;
     try {
-      taskAccountDataJSON = await this.getTaskSubmissionInfo(round);
+      taskAccountDataJSON = await this.getTaskSubmissionInfo(round,true);
     } catch (error) {
       console.error('Task submission not found', error);
       return;
@@ -900,7 +901,7 @@ class NamespaceWrapper {
       }
       let roundSubmissions = null;
       try {
-        roundSubmissions = await this.getTaskSubmissionInfo(r);
+        roundSubmissions = await this.getTaskSubmissionInfo(r, true);
         if (roundSubmissions && roundSubmissions.submissions[r]) {
           return new Set(Object.keys(roundSubmissions.submissions[r]));
         }
