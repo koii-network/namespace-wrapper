@@ -14,7 +14,7 @@ dotenv.config()
 
 const TASK_NAME: string = process.argv[2] || 'Local'
 const TASK_ID: string | undefined = process.argv[3]
-const EXPRESS_PORT: number = parseInt(process.argv[4], 10) || 10000
+const EXPRESS_PORT: number = parseInt(process.argv[4], 10) || 3000
 const MAIN_ACCOUNT_PUBKEY: string = process.argv[6] || ''
 const SECRET_KEY: string = process.argv[7] || ''
 const K2_NODE_URL: string = process.argv[8] || '"https://testnet.koii.network"'
