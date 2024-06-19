@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { createHash } from 'crypto'
-import { Connection, Keypair } from '@_koi/web3.js'
+import { Connection, Keypair, PublicKey } from '@_koi/web3.js'
 import Datastore from 'nedb-promises'
 import { promises as fsPromises } from 'fs'
 import bs58 from 'bs58'
@@ -8,7 +8,12 @@ import nacl from 'tweetnacl'
 import express from 'express'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
-import { GenericHandlerResponse, TaskState, TaskNode } from './types'
+import {
+  GenericHandlerResponse,
+  TaskState,
+  TaskNode,
+  TaskSubmissionState,
+} from './types'
 
 dotenv.config()
 
@@ -132,7 +137,7 @@ class NamespaceWrapper implements TaskNode {
       await genericHandler(
         'checkSubmissionAndUpdateRound',
         submissionValue,
-        round.toString(),
+        round,
       )
     } else {
       if (!this.testingTaskState!.submissions[round]) {
@@ -148,7 +153,7 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
-  async getTaskState(options: any): Promise<any> {
+  async getTaskState(options: any): Promise<TaskState | null> {
     if (taskNodeAdministered) {
       const response = await genericHandler('getTaskState', options)
       if (typeof response === 'number') {
@@ -181,15 +186,187 @@ class NamespaceWrapper implements TaskNode {
       this.testingStakingSystemAccount = new Keypair()
       this.testingDistributionList = {}
       this.testingTaskState = {
+        task_id: '',
+        task_name: 'DummyTestState',
+        task_manager: '',
+        is_allowlisted: false,
+        is_active: false,
+        task_audit_program: 'test',
+        stake_pot_account: '',
+        total_bounty_amount: 10000000000,
+        bounty_amount_per_round: 1000000000,
+        current_round: 0,
+        available_balances: {},
+        stake_list: {},
+        task_metadata: 'test',
+        task_description: 'Dummy Task state for testing flow',
         submissions: {},
+        submissions_audit_trigger: {},
+        total_stake_amount: 50000000000,
+        minimum_stake_amount: 5000000000,
+        ip_address_list: {},
+        round_time: 600,
+        starting_slot: 0,
+        audit_window: 200,
+        submission_window: 200,
+        task_executable_network: 'IPFS',
+        distribution_rewards_submission: {},
+        distributions_audit_trigger: {},
+        distributions_audit_record: {},
+        task_vars: 'test',
+        koii_vars: 'test',
+        is_migrated: false,
+        migrated_to: '',
+        allowed_failed_distributions: 0,
+      }
+    }
+  }
+
+  async getTaskSubmissionInfo(
+    round: number,
+  ): Promise<TaskSubmissionState | null> {
+    if (taskNodeAdministered) {
+      const taskSubmissionInfo = await genericHandler(
+        'getTaskSubmissionInfo',
+        round,
+      )
+      if (
+        typeof taskSubmissionInfo === 'object' &&
+        'error' in taskSubmissionInfo
+      ) {
+        return null
+      }
+      return taskSubmissionInfo
+    } else {
+      return this.testingTaskState
+    }
+  }
+
+  async getSubmitterAccount(): Promise<Keypair | null> {
+    if (taskNodeAdministered) {
+      const submitterAccountResp = await genericHandler('getSubmitterAccount')
+      return Keypair.fromSecretKey(
+        Uint8Array.from(Object.values(submitterAccountResp._keypair.secretKey)),
+      )
+    } else {
+      return this.testingStakingSystemAccount
+    }
+  }
+
+  async auditSubmission(
+    candidatePubkey: PublicKey,
+    isValid: boolean,
+    voterKeypair: Keypair,
+    round: number,
+  ): Promise<void> {
+    if (taskNodeAdministered) {
+      await genericHandler('auditSubmission', candidatePubkey, isValid, round)
+    } else {
+      if (
+        this.testingTaskState!.submissions_audit_trigger[round] &&
+        this.testingTaskState!.submissions_audit_trigger[round][
+          candidatePubkey.toBase58()
+        ]
+      ) {
+        this.testingTaskState!.submissions_audit_trigger[round][
+          candidatePubkey.toBase58()
+        ].votes.push({
+          is_valid: isValid,
+          voter: voterKeypair.publicKey,
+          slot: 100,
+        })
+      } else {
+        this.testingTaskState!.submissions_audit_trigger[round] = {
+          [candidatePubkey.toBase58()]: {
+            trigger_by: this.testingStakingSystemAccount!.publicKey,
+            slot: 100,
+            votes: [],
+          },
+        }
+      }
+    }
+  }
+
+  async validateAndVoteOnNodes(
+    validate: (submissionValue: string, round: number) => Promise<boolean>,
+    round: number,
+  ): Promise<void | string> {
+    console.log('******/  IN VOTING /******')
+    let taskAccountDataJSON: TaskSubmissionState | null = null
+    try {
+      taskAccountDataJSON = await this.getTaskSubmissionInfo(round)
+    } catch (error) {
+      console.error('Error in getting submissions for the round', error)
+    }
+    if (taskAccountDataJSON == null) {
+      console.log('No submissions found for the round', round)
+      return
+    }
+    console.log(
+      `Fetching the submissions of round ${round}`,
+      taskAccountDataJSON.submissions[round],
+    )
+    const submissions = taskAccountDataJSON.submissions[round]
+    if (submissions == null) {
+      console.log(`No submissions found in round ${round}`)
+      return `No submissions found in round ${round}`
+    } else {
+      const keys = Object.keys(submissions)
+      const values = Object.values(submissions)
+      const size = values.length
+      console.log('Submissions from last round: ', keys, values, size)
+      let isValid
+      const submitterAccountKeyPair = await this.getSubmitterAccount()
+      const submitterPubkey = submitterAccountKeyPair!.publicKey.toBase58()
+      for (let i = 0; i < size; i++) {
+        const candidatePublicKey = keys[i]
+        console.log('FOR CANDIDATE KEY', candidatePublicKey)
+        const candidateKeyPairPublicKey = new PublicKey(keys[i])
+        if (candidatePublicKey === submitterPubkey && taskNodeAdministered) {
+          console.log('YOU CANNOT VOTE ON YOUR OWN SUBMISSIONS')
+        } else {
+          try {
+            console.log('SUBMISSION VALUE TO CHECK', values[i].submission_value)
+            isValid = await validate(values[i].submission_value, round)
+            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+
+            if (isValid) {
+              const submissions_audit_trigger =
+                taskAccountDataJSON.submissions_audit_trigger[round]
+              console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
+              if (
+                submissions_audit_trigger &&
+                submissions_audit_trigger[candidatePublicKey]
+              ) {
+                console.log('VOTING TRUE ON AUDIT')
+                const response = await this.auditSubmission(
+                  candidateKeyPairPublicKey,
+                  isValid,
+                  submitterAccountKeyPair!,
+                  round,
+                )
+                console.log('RESPONSE FROM AUDIT FUNCTION', response)
+              }
+            } else if (isValid === false) {
+              console.log('RAISING AUDIT / VOTING FALSE')
+              const response = await this.auditSubmission(
+                candidateKeyPairPublicKey,
+                isValid,
+                submitterAccountKeyPair!,
+                round,
+              )
+              console.log('RESPONSE FROM AUDIT FUNCTION', response)
+            }
+          } catch (err) {
+            console.log('ERROR IN ELSE CONDITION', err)
+          }
+        }
       }
     }
   }
 }
 
-async function genericHandler(
-  ...args: string[]
-): Promise<GenericHandlerResponse> {
+async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {
   try {
     const response = await axios.post(BASE_ROOT_URL, {
       args,
