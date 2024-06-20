@@ -102,4 +102,9 @@ export interface TaskNode {
     voterKeypair: Keypair,
     round: number,
   ): Promise<void>
+  distributionListSubmissionOnChain(round: number): Promise<void | string>
+  uploadDistributionList(
+    distributionList: Record<string, any>,
+    round: number,
+  ): Promise<boolean | null>
 }

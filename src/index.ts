@@ -364,6 +364,49 @@ class NamespaceWrapper implements TaskNode {
       }
     }
   }
+
+  async distributionListSubmissionOnChain(
+    round: number,
+  ): Promise<void | string> {
+    if (taskNodeAdministered) {
+      return await genericHandler('distributionListSubmissionOnChain', round)
+    } else {
+      if (!this.testingTaskState!.distribution_rewards_submission[round]) {
+        this.testingTaskState!.distribution_rewards_submission[round] = {}
+      }
+
+      this.testingTaskState!.distribution_rewards_submission[round][
+        this.testingStakingSystemAccount!.publicKey.toBase58()
+      ] = {
+        submission_value:
+          this.testingStakingSystemAccount!.publicKey.toBase58(),
+        slot: 200,
+        round: 1,
+      }
+    }
+  }
+
+  async uploadDistributionList(
+    distributionList: Record<string, any>,
+    round: number,
+  ): Promise<boolean | null> {
+    if (taskNodeAdministered) {
+      return await genericHandler(
+        'uploadDistributionList',
+        distributionList,
+        round,
+      )
+    } else {
+      if (!this.testingDistributionList![round]) {
+        this.testingDistributionList![round] = {}
+      }
+
+      this.testingDistributionList![round][
+        this.testingStakingSystemAccount!.publicKey.toBase58()
+      ] = Buffer.from(JSON.stringify(distributionList))
+      return true
+    }
+  }
 }
 
 async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {
