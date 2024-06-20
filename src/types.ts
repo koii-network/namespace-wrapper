@@ -30,6 +30,15 @@ export interface TaskSubmissionState {
   submissions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
 }
 
+export interface TaskDistributionInfo {
+  distribution_rewards_submission: SubmissionsPerRound
+  distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
+  distributions_audit_record: Record<
+    string,
+    'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'
+  >
+}
+
 type ROE = number
 
 export interface TaskState {
@@ -71,7 +80,7 @@ export interface TaskState {
   allowed_failed_distributions: number
 }
 
-// Define the interface for the class
+// Interface for the class
 export interface TaskNode {
   testingTaskState?: TaskState | null
   testingStakingSystemAccount?: { publicKey: { toBase58(): string } } | null
@@ -107,4 +116,13 @@ export interface TaskNode {
     distributionList: Record<string, any>,
     round: number,
   ): Promise<boolean | null>
+  getTaskDistributionInfo(round: number): Promise<TaskDistributionInfo | null>
+  distributionListSubmissionOnChain(round: number): Promise<void | string>
+  validateAndVoteOnDistributionList(
+    validateDistribution: (
+      submissionValue: string,
+      round: number,
+    ) => Promise<boolean>,
+    round: number,
+  ): Promise<void | string>
 }

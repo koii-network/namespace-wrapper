@@ -13,6 +13,7 @@ import {
   TaskState,
   TaskNode,
   TaskSubmissionState,
+  TaskDistributionInfo,
 } from './types'
 
 dotenv.config()
@@ -405,6 +406,165 @@ class NamespaceWrapper implements TaskNode {
         this.testingStakingSystemAccount!.publicKey.toBase58()
       ] = Buffer.from(JSON.stringify(distributionList))
       return true
+    }
+  }
+
+  async getTaskDistributionInfo(
+    round: number,
+  ): Promise<TaskDistributionInfo | null> {
+    if (taskNodeAdministered) {
+      const taskDistributionInfo: TaskDistributionInfo = await genericHandler(
+        'getTaskDistributionInfo',
+        round,
+      )
+      if (
+        typeof taskDistributionInfo === 'object' &&
+        'error' in taskDistributionInfo
+      ) {
+        return null
+      }
+      return taskDistributionInfo
+    } else {
+      return this.testingTaskState
+    }
+  }
+
+  async distributionListAuditSubmission(
+    candidatePubkey: PublicKey,
+    isValid: boolean,
+    voterKeypair: Keypair,
+    round: number,
+  ): Promise<void> {
+    if (taskNodeAdministered) {
+      await genericHandler(
+        'distributionListAuditSubmission',
+        candidatePubkey,
+        isValid,
+        round,
+      )
+    } else {
+      if (
+        this.testingTaskState!.distributions_audit_trigger[round] &&
+        this.testingTaskState!.distributions_audit_trigger[round][
+          candidatePubkey.toBase58()
+        ]
+      ) {
+        this.testingTaskState!.distributions_audit_trigger[round][
+          candidatePubkey.toBase58()
+        ].votes.push({
+          is_valid: isValid,
+          voter: voterKeypair.publicKey,
+          slot: 100,
+        })
+      } else {
+        this.testingTaskState!.distributions_audit_trigger[round] = {
+          [candidatePubkey.toBase58()]: {
+            trigger_by: this.testingStakingSystemAccount!.publicKey,
+            slot: 100,
+            votes: [],
+          },
+        }
+      }
+    }
+  }
+
+  async validateAndVoteOnDistributionList(
+    validateDistribution: (
+      submissionValue: string,
+      round: number,
+    ) => Promise<boolean>,
+    round: number,
+  ): Promise<void | string> {
+    console.log('******/  IN VOTING OF DISTRIBUTION LIST /******')
+    let taskAccountDataJSON: TaskDistributionInfo | null = null
+    try {
+      taskAccountDataJSON = await this.getTaskDistributionInfo(round)
+    } catch (error) {
+      console.error('Error in getting distributions for the round', error)
+    }
+    if (taskAccountDataJSON == null) {
+      console.log('No distribution submissions found for the round', round)
+      return
+    }
+    console.log(
+      `Fetching the Distribution submissions of round ${round}`,
+      taskAccountDataJSON.distribution_rewards_submission[round],
+    )
+    const submissions =
+      taskAccountDataJSON?.distribution_rewards_submission[round]
+    if (submissions == null || submissions == undefined) {
+      console.log(`No submisssions found in round ${round}`)
+      return `No submisssions found in round ${round}`
+    } else {
+      const keys = Object.keys(submissions)
+      const values = Object.values(submissions)
+      const size = values.length
+      console.log(
+        'Distribution Submissions from last round: ',
+        keys,
+        values,
+        size,
+      )
+      let isValid: boolean
+      const submitterAccountKeyPair = await this.getSubmitterAccount()
+      const submitterPubkey = submitterAccountKeyPair?.publicKey.toBase58()
+
+      for (let i = 0; i < size; i++) {
+        let candidatePublicKey = keys[i]
+        console.log('FOR CANDIDATE KEY', candidatePublicKey)
+        let candidateKeyPairPublicKey = new PublicKey(keys[i])
+        if (candidatePublicKey == submitterPubkey) {
+          console.log('YOU CANNOT VOTE ON YOUR OWN DISTRIBUTION SUBMISSIONS')
+        } else {
+          try {
+            console.log(
+              'DISTRIBUTION SUBMISSION VALUE TO CHECK',
+              values[i].submission_value,
+            )
+            isValid = await validateDistribution(
+              values[i].submission_value,
+              round,
+            )
+            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+
+            if (isValid) {
+              const distributions_audit_trigger =
+                taskAccountDataJSON.distributions_audit_trigger[round]
+              console.log(
+                'SUBMIT DISTRIBUTION AUDIT TRIGGER',
+                distributions_audit_trigger,
+              )
+              if (
+                distributions_audit_trigger &&
+                distributions_audit_trigger[candidatePublicKey]
+              ) {
+                console.log('VOTING TRUE ON DISTRIBUTION AUDIT')
+                const response = await this.distributionListAuditSubmission(
+                  candidateKeyPairPublicKey,
+                  isValid,
+                  submitterAccountKeyPair!,
+                  round,
+                )
+                console.log(
+                  'RESPONSE FROM DISTRIBUTION AUDIT FUNCTION',
+                  response,
+                )
+              }
+            } else if (isValid == false) {
+              console.log('RAISING AUDIT / VOTING FALSE ON DISTRIBUTION')
+              const response = await this.distributionListAuditSubmission(
+                candidateKeyPairPublicKey,
+                isValid,
+                submitterAccountKeyPair!,
+                round,
+              )
+              console.log('RESPONSE FROM DISTRIBUTION AUDIT FUNCTION', response)
+            }
+          } catch (err) {
+            console.log('ERROR IN ELSE CONDITION FOR DISTRIBUTION', err)
+          }
+        }
+      }
     }
   }
 }
