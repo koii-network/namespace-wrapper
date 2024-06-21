@@ -567,6 +567,258 @@ class NamespaceWrapper implements TaskNode {
       }
     }
   }
+
+  async getDistributionList(
+    publicKey: string,
+    round: number,
+  ): Promise<any | null> {
+    if (taskNodeAdministered) {
+      const response = await genericHandler(
+        'getDistributionList',
+        publicKey,
+        round,
+      )
+      if (response.error) {
+        return null
+      }
+      return response
+    } else {
+      const submissionValAcc =
+        this.testingTaskState!.distribution_rewards_submission[round][
+          this.testingStakingSystemAccount!.publicKey.toBase58()
+        ].submission_value
+      return this.testingDistributionList![round][submissionValAcc]
+    }
+  }
+
+  async nodeSelectionDistributionList(
+    round: number,
+    isPreviousFailed: boolean,
+  ): Promise<string | void> {
+    let taskAccountDataJSON: TaskSubmissionState | null = null
+    try {
+      taskAccountDataJSON = await this.getTaskSubmissionInfo(round)
+    } catch (error) {
+      console.error('Task submission not found', error)
+      return
+    }
+
+    if (taskAccountDataJSON == null) {
+      console.error('Task state not found')
+      return
+    }
+    console.log('EXPECTED ROUND', round)
+
+    const submissions = taskAccountDataJSON.submissions[round]
+    if (submissions == null) {
+      console.log('No submisssions found in N-1 round')
+      return 'No submisssions found in N-1 round'
+    } else {
+      let keys: string[] = []
+      const latestRounds = [round, round - 1, round - 2].filter((r) => r >= 0)
+
+      const promises = latestRounds.map(async (r) => {
+        if (r == round) {
+          return new Set(Object.keys(submissions))
+        } else {
+          let roundSubmissions: TaskSubmissionState | null = null
+          try {
+            roundSubmissions = await this.getTaskSubmissionInfo(r)
+            if (roundSubmissions && roundSubmissions.submissions[r]) {
+              return new Set(Object.keys(roundSubmissions.submissions[r]))
+            }
+          } catch (error) {
+            console.error('Error in getting submissions for the round', error)
+          }
+          return new Set<string>()
+        }
+      })
+
+      const keySets = await Promise.all(promises)
+
+      keys =
+        keySets.length > 0
+          ? [...keySets[0]].filter((key) =>
+              keySets.every((set) => set.has(key)),
+            )
+          : []
+      if (keys.length == 0) {
+        console.log('No common keys found in last 3 rounds')
+        keys = Object.keys(submissions)
+      }
+      console.log('KEYS', keys.length)
+      const values = keys.map((key) => submissions[key])
+
+      let size = keys.length
+      console.log('Submissions from N-2 round: ', size)
+
+      try {
+        const distributionData = await this.getTaskDistributionInfo(round)
+        const audit_record = distributionData?.distributions_audit_record
+        if (audit_record && audit_record[round] == 'PayoutFailed') {
+          console.log('ROUND DATA', audit_record[round])
+          const submitterList =
+            distributionData.distribution_rewards_submission[round]
+          const submitterKeys = Object.keys(submitterList)
+          console.log('SUBMITTER KEYS', submitterKeys)
+          const submitterSize = submitterKeys.length
+          console.log('SUBMITTER SIZE', submitterSize)
+
+          for (let j = 0; j < submitterSize; j++) {
+            console.log('SUBMITTER KEY CANDIDATE', submitterKeys[j])
+            const id = keys.indexOf(submitterKeys[j])
+            console.log('ID', id)
+            if (id != -1) {
+              keys.splice(id, 1)
+              values.splice(id, 1)
+              size--
+            }
+          }
+
+          console.log('KEYS FOR HASH CALC', keys.length)
+        }
+      } catch (error) {
+        console.log('Error in getting distribution data', error)
+      }
+
+      const ValuesString = JSON.stringify(values)
+      const hashDigest = createHash('sha256').update(ValuesString).digest('hex')
+
+      console.log('HASH DIGEST', hashDigest)
+
+      const calculateScore = (str: string = ''): number => {
+        return str.split('').reduce((acc, val) => {
+          return acc + val.charCodeAt(0)
+        }, 0)
+      }
+
+      const compareASCII = (str1: string, str2: string): number => {
+        const firstScore = calculateScore(str1)
+        const secondScore = calculateScore(str2)
+        return Math.abs(firstScore - secondScore)
+      }
+
+      const selectedNode = {
+        score: 0,
+        pubkey: '',
+      }
+      let score = 0
+      if (isPreviousFailed) {
+        let leastScore = -Infinity
+        let secondLeastScore = -Infinity
+        for (let i = 0; i < size; i++) {
+          const candidateSubmissionJson: Record<string, any> = {}
+          candidateSubmissionJson[keys[i]] = values[i]
+          const candidateSubmissionString = JSON.stringify(
+            candidateSubmissionJson,
+          )
+          const candidateSubmissionHash = createHash('sha256')
+            .update(candidateSubmissionString)
+            .digest('hex')
+          const candidateScore = compareASCII(
+            hashDigest,
+            candidateSubmissionHash,
+          )
+          if (candidateScore > leastScore) {
+            secondLeastScore = leastScore
+            leastScore = candidateScore
+          } else if (candidateScore > secondLeastScore) {
+            secondLeastScore = candidateScore
+            selectedNode.score = candidateScore
+            selectedNode.pubkey = keys[i]
+          }
+        }
+      } else {
+        for (let i = 0; i < size; i++) {
+          const candidateSubmissionJson: Record<string, any> = {}
+          candidateSubmissionJson[keys[i]] = values[i]
+          const candidateSubmissionString = JSON.stringify(
+            candidateSubmissionJson,
+          )
+          const candidateSubmissionHash = createHash('sha256')
+            .update(candidateSubmissionString)
+            .digest('hex')
+          const candidateScore = compareASCII(
+            hashDigest,
+            candidateSubmissionHash,
+          )
+          if (candidateScore > score) {
+            score = candidateScore
+            selectedNode.score = candidateScore
+            selectedNode.pubkey = keys[i]
+          }
+        }
+      }
+
+      console.log('SELECTED NODE OBJECT', selectedNode)
+      return selectedNode.pubkey
+    }
+  }
+
+  async getAverageSlotTime(): Promise<number> {
+    if (taskNodeAdministered) {
+      try {
+        return await genericHandler('getAverageSlotTime')
+      } catch (error) {
+        console.error('Error getting average slot time', error)
+        return 400
+      }
+    } else {
+      return 400
+    }
+  }
+
+  async payoutTrigger(round: number): Promise<void> {
+    if (taskNodeAdministered) {
+      await genericHandler('payoutTrigger', round)
+    } else {
+      console.log('Payout Trigger only handles positive flows (Without audits)')
+
+      round = 1
+      const submissionValAcc =
+        this.testingDistributionList![round][
+          this.testingStakingSystemAccount!.publicKey.toBase58()
+        ].submission_value
+      this.testingTaskState!.available_balances =
+        this.testingDistributionList![round][submissionValAcc]
+    }
+  }
+
+  async selectAndGenerateDistributionList(
+    submitDistributionList: (round: number) => Promise<void>,
+    round: number,
+    isPreviousRoundFailed: boolean,
+  ): Promise<void> {
+    console.log('SelectAndGenerateDistributionList called')
+    const selectedNode = await this.nodeSelectionDistributionList(
+      round,
+      isPreviousRoundFailed,
+    )
+    console.log('Selected Node', selectedNode)
+    const submitPubKey = await this.getSubmitterAccount()
+
+    if (!selectedNode || !submitPubKey) return
+
+    if (selectedNode === submitPubKey.publicKey.toBase58()) {
+      await submitDistributionList(round)
+      const taskState = await this.getTaskState({})
+      if (taskState == null) {
+        console.error('Task state not found')
+        return
+      }
+      const avgSlotTime = await this.getAverageSlotTime()
+      if (avgSlotTime == null) {
+        console.error('Avg slot time not found')
+        return
+      }
+      setTimeout(
+        async () => {
+          await this.payoutTrigger(round)
+        },
+        (taskState.audit_window + taskState.submission_window) * avgSlotTime,
+      )
+    }
+  }
 }
 
 async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {

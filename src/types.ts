@@ -55,7 +55,6 @@ export interface TaskState {
   available_balances: Record<string, ROE>
   stake_list: Record<string, ROE>
   task_metadata: string
-
   task_description: string
   submissions: SubmissionsPerRound
   submissions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
@@ -125,4 +124,15 @@ export interface TaskNode {
     ) => Promise<boolean>,
     round: number,
   ): Promise<void | string>
+  getDistributionList(publicKey: string, round: number): Promise<any | null>
+  nodeSelectionDistributionList(
+    round: number,
+    isPreviousFailed: boolean,
+  ): Promise<string | void>
+  payoutTrigger(round: number): Promise<void>
+  selectAndGenerateDistributionList(
+    submitDistributionList: (round: number) => Promise<void>,
+    round: number,
+    isPreviousRoundFailed: boolean,
+  ): Promise<void>
 }
