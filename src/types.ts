@@ -5,6 +5,12 @@ import { Keypair, PublicKey } from '@_koi/web3.js'
 
 export type GenericHandlerResponse = any
 
+export enum LogLevel {
+  Log = 'log',
+  Warn = 'warn',
+  Error = 'error',
+}
+
 export type Submission = {
   submission_value: string
   slot: number
@@ -89,13 +95,17 @@ export interface TaskNode {
   getDb(): Promise<Datastore<Document>>
   storeSet(key: string, value: string): Promise<void>
   getSlot(): Promise<number>
+  getNodes(url: string): Promise<any>
+  getRpcUrl(): Promise<string | void>
+  getProgramAccounts(): Promise<any>
+  logMessage(level: LogLevel, message: string, action: any): Promise<boolean>
+  logger(level: LogLevel, message: string, action: any): Promise<boolean>
   checkSubmissionAndUpdateRound(
     submissionValue: string,
     round: number,
   ): Promise<void>
   storeGet(key: string): Promise<string | null>
   getTaskState(options: any): Promise<any>
-  getRpcUrl(): Promise<string>
   getTaskLevelDBPath(): Promise<string>
   defaultTaskSetup(): Promise<void>
   validateAndVoteOnNodes(

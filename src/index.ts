@@ -14,6 +14,7 @@ import {
   TaskNode,
   TaskSubmissionState,
   TaskDistributionInfo,
+  LogLevel,
 } from './types'
 
 dotenv.config()
@@ -130,6 +131,78 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
+  async getNodes(url: string) {
+    if (taskNodeAdministered) {
+      return await genericHandler('getNodes', url)
+    } else {
+      console.log('Cannot call getNodes in testing mode')
+    }
+  }
+
+  async getRpcUrl(): Promise<string | void> {
+    if (taskNodeAdministered) {
+      return await genericHandler('getRpcUrl')
+    } else {
+      console.log('Cannot call get URL in testing mode')
+    }
+  }
+
+  async getProgramAccounts() {
+    if (taskNodeAdministered) {
+      return await genericHandler('getProgramAccounts')
+    } else {
+      console.log('Cannot call getProgramAccounts in testing mode')
+    }
+  }
+
+  async logMessage(
+    level: LogLevel,
+    message: string,
+    action: any,
+  ): Promise<boolean> {
+    switch (level) {
+      case LogLevel.Log:
+        console.log(message, action)
+        break
+      case LogLevel.Warn:
+        console.warn(message, action)
+        break
+      case LogLevel.Error:
+        console.error(message, action)
+        break
+      default:
+        console.log(
+          `Invalid log level: ${level}. The log levels can be log, warn or error`,
+        )
+        return false
+    }
+    return true
+  }
+
+  /**
+   * This logger function is used to log the task erros , warnings and logs on desktop-node
+   * @param {level} enum // Receive method ["Log", "Warn", "Error"]
+   enum LogLevel {
+   Log = 'log',
+   Warn = 'warn',
+   Error = 'error',
+   }
+   * @param {message} string // log, error or warning message
+   * @returns {boolean} // true if the message is logged successfully otherwise false
+   */
+
+  async logger(
+    level: LogLevel,
+    message: string,
+    action: any,
+  ): Promise<boolean> {
+    if (taskNodeAdministered) {
+      return await genericHandler('logger', level, message, action)
+    } else {
+      return await this.logMessage(level, message, action)
+    }
+  }
+
   async checkSubmissionAndUpdateRound(
     submissionValue: string = 'default',
     round: number,
@@ -168,10 +241,6 @@ class NamespaceWrapper implements TaskNode {
     } else {
       return this.testingTaskState
     }
-  }
-
-  async getRpcUrl(): Promise<string> {
-    return K2_NODE_URL
   }
 
   async getTaskLevelDBPath(): Promise<string> {
@@ -846,7 +915,9 @@ const namespaceWrapper = new NamespaceWrapper()
 if (taskNodeAdministered) {
   namespaceWrapper.getRpcUrl().then((rpcUrl) => {
     console.log(rpcUrl, 'RPC URL')
-    connection = new Connection(rpcUrl, 'confirmed')
+    if (typeof rpcUrl === 'string') {
+      connection = new Connection(rpcUrl, 'confirmed')
+    }
   })
 }
 
