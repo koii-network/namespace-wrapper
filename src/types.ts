@@ -1,5 +1,11 @@
 import Datastore from 'nedb-promises'
-import { Keypair, PublicKey } from '@_koi/web3.js'
+import { Transaction, Keypair, PublicKey } from '@_koi/web3.js'
+import {
+  promises as fsPromises,
+  createWriteStream,
+  WriteStream,
+  readFileSync,
+} from 'fs'
 
 // Define types for the handler response and arguments
 
@@ -94,9 +100,48 @@ export interface TaskNode {
   initializeDB(): Promise<void>
   getDb(): Promise<Datastore<Document>>
   storeSet(key: string, value: string): Promise<void>
+  fs(
+    method: keyof typeof fsPromises,
+    path: string,
+    ...args: any[]
+  ): Promise<any>
+  fsStaking(
+    method: keyof typeof fsPromises,
+    path: string,
+    ...args: any[]
+  ): Promise<any>
+  fsWriteStream(imagepath: string): Promise<WriteStream | void>
+  fsReadStream(imagepath: string): Promise<Buffer | void>
+  bs58Encode(data: Uint8Array): Promise<string>
+  bs58Decode(data: string): Promise<Uint8Array>
+  decodePayload(payload: Uint8Array): string
+  verifySignature(
+    signedMessage: string,
+    pubKey: string,
+  ): Promise<{ data?: string; error?: string }>
   getSlot(): Promise<number>
   getNodes(url: string): Promise<any>
   getRpcUrl(): Promise<string | void>
+  sendAndConfirmTransactionWrapper(
+    transaction: Transaction,
+    signers: Keypair[],
+  ): Promise<void | string>
+  sendTransaction(
+    serviceNodeAccount: PublicKey,
+    beneficiaryAccount: PublicKey,
+    amount: number,
+  ): Promise<void | string>
+  claimReward(
+    stakePotAccount: PublicKey,
+    beneficiaryAccount: PublicKey,
+    claimerKeypair: Keypair,
+  ): Promise<void>
+  stakeOnChain(
+    taskStateInfoPublicKey: PublicKey,
+    stakingAccKeypair: Keypair,
+    stakePotAccount: PublicKey,
+    stakeAmount: number,
+  ): Promise<void | string>
   getProgramAccounts(): Promise<any>
   logMessage(level: LogLevel, message: string, action: any): Promise<boolean>
   logger(level: LogLevel, message: string, action: any): Promise<boolean>

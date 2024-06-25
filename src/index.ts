@@ -1,8 +1,13 @@
 import axios from 'axios'
 import { createHash } from 'crypto'
-import { Connection, Keypair, PublicKey } from '@_koi/web3.js'
+import { Transaction, Connection, Keypair, PublicKey } from '@_koi/web3.js'
 import Datastore from 'nedb-promises'
-import { promises as fsPromises } from 'fs'
+import {
+  promises as fsPromises,
+  createWriteStream,
+  WriteStream,
+  readFileSync,
+} from 'fs'
 import bs58 from 'bs58'
 import nacl from 'tweetnacl'
 import express from 'express'
@@ -117,6 +122,95 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
+  async fs(
+    method: keyof typeof fsPromises,
+    path: string,
+    ...args: any[]
+  ): Promise<any> {
+    if (taskNodeAdministered) {
+      return await genericHandler('fs', method, path, ...args)
+    } else {
+      const fsMethod = fsPromises[method] as (...args: any[]) => Promise<any>
+      return fsMethod(path, ...args)
+    }
+  }
+
+  async fsStaking(
+    method: keyof typeof fsPromises,
+    path: string,
+    ...args: any[]
+  ): Promise<any> {
+    if (taskNodeAdministered) {
+      return await genericHandler('fsStaking', method, path, ...args)
+    } else {
+      const fsMethod = fsPromises[method] as (...args: any[]) => Promise<any>
+      return fsMethod(path, ...args)
+    }
+  }
+  async fsWriteStream(imagepath: string): Promise<WriteStream | void> {
+    if (taskNodeAdministered) {
+      return await genericHandler('fsWriteStream', imagepath)
+    } else {
+      const writer = createWriteStream(imagepath)
+      return writer
+    }
+  }
+
+  async fsReadStream(imagepath: string): Promise<Buffer | void> {
+    if (taskNodeAdministered) {
+      return await genericHandler('fsReadStream', imagepath)
+    } else {
+      const file = readFileSync(imagepath)
+      return file
+    }
+  }
+
+  async payloadSigning(body: Record<string, unknown>): Promise<string | void> {
+    if (taskNodeAdministered) {
+      return await genericHandler('signData', body)
+    } else {
+      const msg = new TextEncoder().encode(JSON.stringify(body))
+      const signedMessage = nacl.sign(
+        msg,
+        this.testingMainSystemAccount!.secretKey,
+      )
+      return await this.bs58Encode(signedMessage)
+    }
+  }
+
+  async bs58Encode(data: Uint8Array): Promise<string> {
+    return bs58.encode(data)
+  }
+
+  async bs58Decode(data: string): Promise<Uint8Array> {
+    return new Uint8Array(bs58.decode(data))
+  }
+
+  decodePayload(payload: Uint8Array): string {
+    return new TextDecoder().decode(payload)
+  }
+
+  async verifySignature(
+    signedMessage: string,
+    pubKey: string,
+  ): Promise<{ data?: string; error?: string }> {
+    if (taskNodeAdministered) {
+      return await genericHandler('verifySignedData', signedMessage, pubKey)
+    } else {
+      try {
+        const payload = nacl.sign.open(
+          await this.bs58Decode(signedMessage),
+          await this.bs58Decode(pubKey),
+        )
+        if (!payload) return { error: 'Invalid signature' }
+        return { data: this.decodePayload(payload) }
+      } catch (e) {
+        console.error(e)
+        return { error: `Verification failed: ${e}` }
+      }
+    }
+  }
+
   async getSlot(): Promise<number> {
     if (taskNodeAdministered) {
       const response = await genericHandler('getCurrentSlot')
@@ -152,6 +246,83 @@ class NamespaceWrapper implements TaskNode {
       return await genericHandler('getProgramAccounts')
     } else {
       console.log('Cannot call getProgramAccounts in testing mode')
+    }
+  }
+
+  async sendAndConfirmTransactionWrapper(
+    transaction: Transaction,
+    signers: Keypair[],
+  ): Promise<void | string> {
+    if (taskNodeAdministered) {
+      console.log('Cannot call sendTransaction in testing mode')
+      return
+    }
+    const blockhash = (await connection.getRecentBlockhash('finalized'))
+      .blockhash
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer = new PublicKey(MAIN_ACCOUNT_PUBKEY)
+    return await genericHandler(
+      'sendAndConfirmTransactionWrapper',
+      transaction.serialize({
+        requireAllSignatures: false,
+        verifySignatures: false,
+      }),
+      signers,
+    )
+  }
+
+  async sendTransaction(
+    serviceNodeAccount: PublicKey,
+    beneficiaryAccount: PublicKey,
+    amount: number,
+  ): Promise<void | string> {
+    if (!taskNodeAdministered) {
+      console.log('Cannot call sendTransaction in testing mode')
+      return
+    }
+    return await genericHandler(
+      'sendTransaction',
+      serviceNodeAccount,
+      beneficiaryAccount,
+      amount,
+    )
+  }
+
+  async claimReward(
+    stakePotAccount: PublicKey,
+    beneficiaryAccount: PublicKey,
+    claimerKeypair: Keypair,
+  ): Promise<void> {
+    if (taskNodeAdministered) {
+      console.log('Cannot call sendTransaction in testing mode')
+      return
+    }
+    return await genericHandler(
+      'claimReward',
+      stakePotAccount,
+      beneficiaryAccount,
+      claimerKeypair,
+    )
+  }
+
+  async stakeOnChain(
+    taskStateInfoPublicKey: PublicKey,
+    stakingAccKeypair: Keypair,
+    stakePotAccount: PublicKey,
+    stakeAmount: number,
+  ): Promise<void | string> {
+    if (taskNodeAdministered) {
+      return await genericHandler(
+        'stakeOnChain',
+        taskStateInfoPublicKey,
+        stakingAccKeypair,
+        stakePotAccount,
+        stakeAmount,
+      )
+    } else {
+      this.testingTaskState!.stake_list[
+        this.testingStakingSystemAccount!.publicKey.toBase58()
+      ] = stakeAmount
     }
   }
 
