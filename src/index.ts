@@ -415,7 +415,11 @@ class NamespaceWrapper implements TaskNode {
   }
 
   async getTaskLevelDBPath(): Promise<string> {
-    return 'path/to/leveldb'
+    if (taskNodeAdministered) {
+      return await genericHandler('getTaskLevelDBPath')
+    } else {
+      return './KOIIDB'
+    }
   }
 
   async defaultTaskSetup(): Promise<void> {
