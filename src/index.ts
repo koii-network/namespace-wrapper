@@ -1040,10 +1040,15 @@ class NamespaceWrapper implements TaskNode {
     )
     console.log('Selected Node', selectedNode)
     const submitPubKey = await this.getSubmitterAccount()
+    console.log('Submitter KEYPAIR', submitPubKey)
 
     if (!selectedNode || !submitPubKey) return
 
-    if (selectedNode === submitPubKey.publicKey.toBase58()) {
+    console.log('Selected Node', selectedNode)
+    console.log('Submitter PubKey', submitPubKey.publicKey.toBase58())
+
+    if (selectedNode === submitPubKey?.publicKey.toBase58()) {
+      console.log('IN SELECTED NODE CONDITION AND CALLING SUBMIT DISTRIBUTION')
       await submitDistributionList(round)
       const taskState = await this.getTaskState({})
       if (taskState == null) {
