@@ -7,12 +7,12 @@ npm install @_koii/namespace-wrapper
 ```
 ## Usage
 ```
-const { namespaceWrapper, taskNodeAdministered } = require('koii-task-node');
+const { namespaceWrapper, taskNodeAdministered } = require('@_koii/namespace-wrapper');;
 
 // Example: Logging a message
 namespaceWrapper.logger('log', 'This is a log message');
 ```
-## Environment Vairables
+## Environment Variables
 
 You don't have to know these variables if you are using a Koii Node template.
 
