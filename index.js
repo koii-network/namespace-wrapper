@@ -248,11 +248,6 @@ class NamespaceWrapper {
     return new TextDecoder().decode(payload);
   }
 
-  /**
-   * Namespace wrapper of storeGetAsync
-   * @param {string} signedMessage r // Path to get
-   */
-
   async verifySignature(signedMessage, pubKey) {
     if (taskNodeAdministered) {
       return await genericHandler('verifySignedData', signedMessage, pubKey);
