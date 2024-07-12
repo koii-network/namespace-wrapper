@@ -1,7 +1,7 @@
 const { default: axios } = require('axios');
 const { createHash } = require('crypto');
 
-const { Connection, PublicKey, Keypair } = require('@_koi/web3.js');
+const { Connection, PublicKey, Keypair } = require('@_koii/web3.js');
 
 const Datastore = require('nedb-promises');
 const fsPromises = require('fs/promises');
@@ -745,7 +745,7 @@ class NamespaceWrapper {
     const taskNodeVersion = await this.getTaskNodeVersion();
     if (semver.gte(taskNodeVersion, "1.11.19")) {
       tasknodeVersionSatisfied = true;
-    } 
+    }
     let taskAccountDataJSON = null;
     try {
       taskAccountDataJSON = await this.getTaskDistributionInfo(round);
@@ -1099,7 +1099,7 @@ async function genericHandler(...args) {
     }
   } catch (err) {
     const responseData = err?.response?.data?.message;
-    if ((args[0] === 'getTaskSubmissionInfo' || args[0] === 'getTaskDistributionInfo') && 
+    if ((args[0] === 'getTaskSubmissionInfo' || args[0] === 'getTaskDistributionInfo') &&
     responseData && typeof responseData === 'string' && responseData.includes('Task does not have any')) {
       console.log(`Error in genericHandler: "${args[0]}"`, err.message);
       console.log(err?.response?.data);
