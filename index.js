@@ -5,6 +5,7 @@ const { Connection, PublicKey, Keypair } = require('@_koi/web3.js');
 
 const Datastore = require('nedb-promises');
 const fsPromises = require('fs/promises');
+const fs = require('fs');
 const bs58 = require('bs58');
 const nacl = require('tweetnacl');
 const semver = require('semver');
@@ -570,7 +571,7 @@ class NamespaceWrapper {
     }
     if (this.#testingTaskState) return;
     this.#testingMainSystemAccount = new Keypair();
-    this.#testingStakingSystemAccount = new Keypair();
+    this.#testingStakingSystemAccount = this.getTestingStakingWallet();
     this.#testingDistributionList = {};
     this.#testingTaskState = {
       task_name: 'DummyTestState',
@@ -745,7 +746,7 @@ class NamespaceWrapper {
     const taskNodeVersion = await this.getTaskNodeVersion();
     if (semver.gte(taskNodeVersion, "1.11.19")) {
       tasknodeVersionSatisfied = true;
-    } 
+    }
     let taskAccountDataJSON = null;
     try {
       taskAccountDataJSON = await this.getTaskDistributionInfo(round);
@@ -1083,6 +1084,18 @@ class NamespaceWrapper {
     }
     return this.#testingMainSystemAccount.publicKey.toBase58();
   }
+
+  getTestingStakingWallet() {
+    if (process.env.STAKING_WALLET_PATH) {
+      const wallet = fs.readFileSync(process.env.STAKING_WALLET_PATH, "utf-8");
+      return Keypair.fromSecretKey(
+          Uint8Array.from(JSON.parse(wallet))
+      );
+    }
+    else {
+      return new Keypair();
+    }
+  }
 }
 
 async function genericHandler(...args) {
@@ -1099,7 +1112,7 @@ async function genericHandler(...args) {
     }
   } catch (err) {
     const responseData = err?.response?.data?.message;
-    if ((args[0] === 'getTaskSubmissionInfo' || args[0] === 'getTaskDistributionInfo') && 
+    if ((args[0] === 'getTaskSubmissionInfo' || args[0] === 'getTaskDistributionInfo') &&
     responseData && typeof responseData === 'string' && responseData.includes('Task does not have any')) {
       console.log(`Error in genericHandler: "${args[0]}"`, err.message);
       console.log(err?.response?.data);
