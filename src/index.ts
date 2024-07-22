@@ -1014,7 +1014,7 @@ class NamespaceWrapper implements TaskNode {
 
   async payoutTrigger(round: number): Promise<void> {
     if (taskNodeAdministered) {
-      await genericHandler('payoutTrigger', round)
+      await genericHandler('payloadTrigger', round)
     } else {
       console.log('Payout Trigger only handles positive flows (Without audits)')
 
@@ -1040,12 +1040,13 @@ class NamespaceWrapper implements TaskNode {
     )
     console.log('Selected Node', selectedNode)
     const submitPubKey = await this.getSubmitterAccount()
-    console.log('Submitter KEYPAIR', submitPubKey)
+    
 
     if (!selectedNode || !submitPubKey) return
 
     console.log('Selected Node', selectedNode)
     console.log('Submitter PubKey', submitPubKey.publicKey.toBase58())
+    console.log('Round', round)
 
     if (selectedNode === submitPubKey?.publicKey.toBase58()) {
       console.log('IN SELECTED NODE CONDITION AND CALLING SUBMIT DISTRIBUTION')
