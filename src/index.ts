@@ -20,6 +20,7 @@ import {
   TaskSubmissionState,
   TaskDistributionInfo,
   LogLevel,
+  TaskStateOptions,
 } from './types'
 
 dotenv.config()
@@ -53,7 +54,7 @@ app.use((req, res, next) => {
 })
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
+  res.json({ status: 200, message: 'Running' })
 })
 
 const _server = app.listen(EXPRESS_PORT, () => {
@@ -329,7 +330,7 @@ class NamespaceWrapper implements TaskNode {
   async logMessage(
     level: LogLevel,
     message: string,
-    action: any,
+    action: string,
   ): Promise<boolean> {
     switch (level) {
       case LogLevel.Log:
@@ -365,7 +366,7 @@ class NamespaceWrapper implements TaskNode {
   async logger(
     level: LogLevel,
     message: string,
-    action: any,
+    action: string,
   ): Promise<boolean> {
     if (taskNodeAdministered) {
       return await genericHandler('logger', level, message, action)
@@ -398,7 +399,7 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
-  async getTaskState(options: any): Promise<TaskState | null> {
+  async getTaskState(options: TaskStateOptions): Promise<TaskState | null> {
     if (taskNodeAdministered) {
       const response = await genericHandler('getTaskState', options)
       if (typeof response === 'number') {
@@ -1040,7 +1041,6 @@ class NamespaceWrapper implements TaskNode {
     )
     console.log('Selected Node', selectedNode)
     const submitPubKey = await this.getSubmitterAccount()
-    
 
     if (!selectedNode || !submitPubKey) return
 
