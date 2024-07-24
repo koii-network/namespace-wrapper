@@ -17,6 +17,13 @@ export enum LogLevel {
   Error = 'error',
 }
 
+export interface TaskStateOptions {
+  is_submission_required?: boolean
+  is_distribution_required?: boolean
+  is_available_balances_required?: boolean
+  is_stake_list_required?: boolean
+}
+
 export type Submission = {
   submission_value: string
   slot: number
@@ -143,8 +150,8 @@ export interface TaskNode {
     stakeAmount: number,
   ): Promise<void | string>
   getProgramAccounts(): Promise<any>
-  logMessage(level: LogLevel, message: string, action: any): Promise<boolean>
-  logger(level: LogLevel, message: string, action: any): Promise<boolean>
+  logMessage(level: LogLevel, message: string, action: string): Promise<boolean>
+  logger(level: LogLevel, message: string, action: string): Promise<boolean>
   checkSubmissionAndUpdateRound(
     submissionValue: string,
     round: number,
