@@ -11,10 +11,10 @@ publish:
       echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
 
     # Install dependencies
-    - npm install
+    - yarn install
 
     # Build the project (compile TypeScript to JavaScript)
-    - npm run build  
+    - yarn run build  
 
 
     - NPM_PACKAGE_NAME=$(node -p "require('./package.json').name")
