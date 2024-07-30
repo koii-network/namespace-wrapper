@@ -159,6 +159,7 @@ export interface TaskNode {
   storeGet(key: string): Promise<string | null>
   getTaskState(options: any): Promise<any>
   getTaskLevelDBPath(): Promise<string>
+  getBasePath(): Promise<string>
   defaultTaskSetup(): Promise<void>
   validateAndVoteOnNodes(
     validate: (submissionValue: string, round: number) => Promise<boolean>,
