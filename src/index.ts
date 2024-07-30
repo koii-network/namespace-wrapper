@@ -423,6 +423,14 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
+  async getBasePath() {
+    if (taskNodeAdministered) {
+      return await genericHandler('getBasePath')
+    } else {
+      return './'
+    }
+  }
+
   async defaultTaskSetup(): Promise<void> {
     if (taskNodeAdministered) {
       await genericHandler('defaultTaskSetup')
