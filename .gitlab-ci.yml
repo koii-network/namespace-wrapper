@@ -6,15 +6,21 @@ publish:
       changes:
         - package.json
   script:
-    # 创建 .npmrc 文件并配置 npm registry 和 token
+
     - |
       echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
 
-    # 提取 package.json 中的包信息
+    # Install dependencies
+    - yarn install
+
+    # Build the project (compile TypeScript to JavaScript)
+    - yarn run build  
+
+
     - NPM_PACKAGE_NAME=$(node -p "require('./package.json').name")
     - NPM_PACKAGE_VERSION=$(node -p "require('./package.json').version")
 
-    # 检查包是否已发布，如果没有则发布新版本
+
     - |
       if [[ "$(npm view ${NPM_PACKAGE_NAME} versions)" != *"'${NPM_PACKAGE_VERSION}'"* ]]; then
         npm publish
