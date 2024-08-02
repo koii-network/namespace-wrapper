@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { createHash } from 'crypto'
-import { Transaction, Connection, Keypair, PublicKey } from '@_koi/web3.js'
+import { Transaction, Connection, Keypair, PublicKey } from '@_koii/web3.js'
 import Datastore from 'nedb-promises'
 import {
   promises as fsPromises,
@@ -428,6 +428,14 @@ class NamespaceWrapper implements TaskNode {
       return await genericHandler('getBasePath')
     } else {
       return './'
+    }
+  }
+
+  async getRound(): Promise<number> {
+    if (taskNodeAdministered) {
+      return await genericHandler('getRound')
+    } else {
+      return 1
     }
   }
 

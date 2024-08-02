@@ -1,5 +1,5 @@
 import Datastore from 'nedb-promises'
-import { Transaction, Keypair, PublicKey } from '@_koi/web3.js'
+import { Transaction, Keypair, PublicKey } from '@_koii/web3.js'
 import {
   promises as fsPromises,
   createWriteStream,
@@ -160,6 +160,7 @@ export interface TaskNode {
   getTaskState(options: any): Promise<any>
   getTaskLevelDBPath(): Promise<string>
   getBasePath(): Promise<string>
+  getRound(): Promise<number>
   defaultTaskSetup(): Promise<void>
   validateAndVoteOnNodes(
     validate: (submissionValue: string, round: number) => Promise<boolean>,
