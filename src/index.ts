@@ -445,7 +445,7 @@ class NamespaceWrapper implements TaskNode {
     } else {
       if (this.testingTaskState) return
       this.testingMainSystemAccount = new Keypair()
-      this.testingStakingSystemAccount = new Keypair()
+      this.testingStakingSystemAccount = this.getTestingStakingWallet()
       this.testingDistributionList = {}
       this.testingTaskState = {
         task_id: '',
@@ -1124,6 +1124,17 @@ class NamespaceWrapper implements TaskNode {
         },
         (taskState.audit_window + taskState.submission_window) * avgSlotTime,
       )
+    }
+  }
+  getTestingStakingWallet(): Keypair {
+    if (process.env.STAKING_WALLET_PATH) {
+      const wallet = readFileSync(process.env.STAKING_WALLET_PATH, "utf-8");
+      return Keypair.fromSecretKey(
+          Uint8Array.from(JSON.parse(wallet))
+      );
+    }
+    else {
+      return new Keypair();
     }
   }
 }
