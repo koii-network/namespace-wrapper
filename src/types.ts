@@ -165,9 +165,12 @@ export interface TaskNode {
   validateAndVoteOnNodes(
     validate: (submissionValue: string, round: number) => Promise<boolean>,
     round: number,
+    useRandomSampling?: boolean,
   ): Promise<void | string>
   getTaskSubmissionInfo(round: number): Promise<TaskSubmissionState | null>
   getSubmitterAccount(): Promise<Keypair | null>
+  getMainAccountPubkey(): Promise<string | null>
+  getTaskNodeVersion(): Promise<string>
   auditSubmission(
     candidatePubkey: PublicKey,
     isValid: boolean,
