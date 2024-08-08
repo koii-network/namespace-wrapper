@@ -515,6 +515,22 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
+  async getMainAccountPubkey(): Promise<string | null> {
+    if (taskNodeAdministered) {
+      return MAIN_ACCOUNT_PUBKEY
+    } else {
+      return this.testingMainSystemAccount!.publicKey.toBase58()
+    }
+  }
+
+  async getTaskNodeVersion(): Promise<string> {
+    if (taskNodeAdministered) {
+      return await genericHandler('getTaskNodeVersion')
+    } else {
+      return '1.11.19'
+    }
+  }
+
   async auditSubmission(
     candidatePubkey: PublicKey,
     isValid: boolean,
@@ -552,8 +568,10 @@ class NamespaceWrapper implements TaskNode {
   async validateAndVoteOnNodes(
     validate: (submissionValue: string, round: number) => Promise<boolean>,
     round: number,
+    useRandomSampling?: boolean,
   ): Promise<void | string> {
     console.log('******/  IN VOTING /******')
+    useRandomSampling = useRandomSampling ?? false
     let taskAccountDataJSON: TaskSubmissionState | null = null
     try {
       taskAccountDataJSON = await this.getTaskSubmissionInfo(round)
@@ -577,40 +595,47 @@ class NamespaceWrapper implements TaskNode {
       const values = Object.values(submissions)
       const size = values.length
       console.log('Submissions from last round: ', keys, values, size)
-      let isValid
+
+      let indices: number[] = []
+      if (useRandomSampling == true) {
+        const numberOfChecks = Math.min(5, size)
+        let uniqueIndices = new Set<number>()
+        while (uniqueIndices.size < numberOfChecks) {
+          const randomIndex = Math.floor(Math.random() * size)
+          uniqueIndices.add(randomIndex)
+        }
+        indices = Array.from(uniqueIndices)
+      } else {
+        indices = Array.from({ length: size }, (_, i) => i)
+      }
       const submitterAccountKeyPair = await this.getSubmitterAccount()
       const submitterPubkey = submitterAccountKeyPair!.publicKey.toBase58()
-      for (let i = 0; i < size; i++) {
-        const candidatePublicKey = keys[i]
-        console.log('FOR CANDIDATE KEY', candidatePublicKey)
-        const candidateKeyPairPublicKey = new PublicKey(keys[i])
-        if (candidatePublicKey === submitterPubkey && taskNodeAdministered) {
-          console.log('YOU CANNOT VOTE ON YOUR OWN SUBMISSIONS')
-        } else {
-          try {
-            console.log('SUBMISSION VALUE TO CHECK', values[i].submission_value)
-            isValid = await validate(values[i].submission_value, round)
-            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
 
-            if (isValid) {
-              const submissions_audit_trigger =
-                taskAccountDataJSON.submissions_audit_trigger[round]
-              console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
-              if (
-                submissions_audit_trigger &&
-                submissions_audit_trigger[candidatePublicKey]
-              ) {
-                console.log('VOTING TRUE ON AUDIT')
-                const response = await this.auditSubmission(
-                  candidateKeyPairPublicKey,
-                  isValid,
-                  submitterAccountKeyPair!,
-                  round,
-                )
-                console.log('RESPONSE FROM AUDIT FUNCTION', response)
-              }
-            } else if (isValid === false) {
-              console.log('RAISING AUDIT / VOTING FALSE')
+      for (let index of indices) {
+        const candidatePublicKey = keys[index]
+        console.log('FOR CANDIDATE KEY', candidatePublicKey)
+        const candidateKeyPairPublicKey = new PublicKey(candidatePublicKey)
+        if (candidatePublicKey === submitterPubkey) {
+          console.log('YOU CANNOT VOTE ON YOUR OWN SUBMISSIONS')
+          continue
+        }
+        try {
+          console.log(
+            'SUBMISSION VALUE TO CHECK',
+            values[index].submission_value,
+          )
+          const isValid = await validate(values[index].submission_value, round)
+          console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+
+          if (isValid) {
+            const submissions_audit_trigger =
+              taskAccountDataJSON.submissions_audit_trigger[round]
+            console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
+            if (
+              submissions_audit_trigger &&
+              submissions_audit_trigger[candidatePublicKey]
+            ) {
+              console.log('VOTING TRUE ON AUDIT')
               const response = await this.auditSubmission(
                 candidateKeyPairPublicKey,
                 isValid,
@@ -619,9 +644,18 @@ class NamespaceWrapper implements TaskNode {
               )
               console.log('RESPONSE FROM AUDIT FUNCTION', response)
             }
-          } catch (err) {
-            console.log('ERROR IN ELSE CONDITION', err)
+          } else {
+            console.log('RAISING AUDIT / VOTING FALSE')
+            const response = await this.auditSubmission(
+              candidateKeyPairPublicKey,
+              isValid,
+              submitterAccountKeyPair!,
+              round,
+            )
+            console.log('RESPONSE FROM AUDIT FUNCTION', response)
           }
+        } catch (err) {
+          console.log('ERROR IN ELSE CONDITION', err)
         }
       }
     }
@@ -735,8 +769,15 @@ class NamespaceWrapper implements TaskNode {
       round: number,
     ) => Promise<boolean>,
     round: number,
+    //isPreviousRoundFailed?: boolean,
   ): Promise<void | string> {
     console.log('******/  IN VOTING OF DISTRIBUTION LIST /******')
+    //isPreviousRoundFailed = isPreviousRoundFailed ?? false
+    // let tasknodeVersionSatisfied = false
+    // const taskNodeVersion = await this.getTaskNodeVersion()
+    // if (semver.gte(taskNodeVersion, '1.11.19')) {
+    //   tasknodeVersionSatisfied = true
+    // }
     let taskAccountDataJSON: TaskDistributionInfo | null = null
     try {
       taskAccountDataJSON = await this.getTaskDistributionInfo(round)
