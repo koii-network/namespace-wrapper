@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { createHash } from 'crypto'
+import crypto from 'crypto'
 import { Transaction, Connection, Keypair, PublicKey } from '@_koii/web3.js'
 import Datastore from 'nedb-promises'
 import {
@@ -582,10 +583,10 @@ class NamespaceWrapper implements TaskNode {
       console.log('No submissions found for the round', round)
       return
     }
-    console.log(
-      `Fetching the submissions of round ${round}`,
-      taskAccountDataJSON.submissions[round],
-    )
+    // console.log(
+    //   `Fetching the submissions of round ${round}`,
+    //   taskAccountDataJSON.submissions[round],
+    // )
     const submissions = taskAccountDataJSON.submissions[round]
     if (submissions == null) {
       console.log(`No submissions found in round ${round}`)
@@ -614,6 +615,7 @@ class NamespaceWrapper implements TaskNode {
       for (let index of indices) {
         const candidatePublicKey = keys[index]
         console.log('FOR CANDIDATE KEY', candidatePublicKey)
+
         const candidateKeyPairPublicKey = new PublicKey(candidatePublicKey)
         if (candidatePublicKey === submitterPubkey) {
           console.log('YOU CANNOT VOTE ON YOUR OWN SUBMISSIONS')
@@ -624,18 +626,63 @@ class NamespaceWrapper implements TaskNode {
             'SUBMISSION VALUE TO CHECK',
             values[index].submission_value,
           )
-          const isValid = await validate(values[index].submission_value, round)
-          console.log(`Voting ${isValid} to ${candidatePublicKey}`)
 
-          if (isValid) {
-            const submissions_audit_trigger =
-              taskAccountDataJSON.submissions_audit_trigger[round]
-            console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
-            if (
-              submissions_audit_trigger &&
-              submissions_audit_trigger[candidatePublicKey]
-            ) {
-              console.log('VOTING TRUE ON AUDIT')
+          // call the function to validate signature and get the hash of data
+
+          const cid = values[index].submission_value
+
+          const data = JSON.parse(
+            await this.retrieveThroughHttpGateway(
+              cid,
+              `submissionValues${round}.json`,
+            ),
+          )
+
+          const receivedHash = await this.verifySignature(
+            data.signedMessage,
+            candidatePublicKey,
+          )
+
+          console.log('Received hash', receivedHash)
+          // calculate the hash from the file contents
+
+          const calculatedHash = crypto
+            .createHash('sha256')
+            .update(data.submission)
+            .digest('hex')
+
+          console.log('Calculated hash', calculatedHash)
+
+          // Remove the extra quotes from receivedHash.data
+          const normalizedReceivedHash = receivedHash.data?.replace(/"/g, '')
+
+          console.log('Normalized received hash', normalizedReceivedHash)
+
+          //  compare if the calculated hash is equal to the received hash
+
+          if (calculatedHash == normalizedReceivedHash) {
+            const isValid = await validate(data.submission, round)
+            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+
+            if (isValid) {
+              const submissions_audit_trigger =
+                taskAccountDataJSON.submissions_audit_trigger[round]
+              console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
+              if (
+                submissions_audit_trigger &&
+                submissions_audit_trigger[candidatePublicKey]
+              ) {
+                console.log('VOTING TRUE ON AUDIT')
+                const response = await this.auditSubmission(
+                  candidateKeyPairPublicKey,
+                  isValid,
+                  submitterAccountKeyPair!,
+                  round,
+                )
+                console.log('RESPONSE FROM AUDIT FUNCTION', response)
+              }
+            } else {
+              console.log('RAISING AUDIT / VOTING FALSE')
               const response = await this.auditSubmission(
                 candidateKeyPairPublicKey,
                 isValid,
@@ -645,10 +692,11 @@ class NamespaceWrapper implements TaskNode {
               console.log('RESPONSE FROM AUDIT FUNCTION', response)
             }
           } else {
+            console.error('INVALID HASH')
             console.log('RAISING AUDIT / VOTING FALSE')
             const response = await this.auditSubmission(
               candidateKeyPairPublicKey,
-              isValid,
+              false,
               submitterAccountKeyPair!,
               round,
             )
@@ -659,6 +707,65 @@ class NamespaceWrapper implements TaskNode {
         }
       }
     }
+  }
+
+  fetchWithTimeout = (url: string, timeout = 60000): Promise<Response> => {
+    const controller = new AbortController()
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        controller?.abort()
+        reject(new Error('Request timed out'))
+      }, timeout)
+
+      fetch(url, { signal: controller.signal })
+        .then((response) => {
+          clearTimeout(timeoutId)
+          resolve(response)
+        })
+        .catch((error) => {
+          if (error.name === 'AbortError') {
+            reject(new Error('Request was aborted'))
+          } else {
+            reject(error)
+          }
+        })
+    })
+  }
+
+  async retrieveThroughHttpGateway(
+    cid: string,
+    fileName = '',
+  ): Promise<string> {
+    console.log('use IPFS HTTP gateway')
+
+    const listOfIpfsGatewaysUrls = [
+      `https://koii-k2-task-metadata.s3.us-east-2.amazonaws.com/${cid}/${fileName}`,
+      `https://${cid}.ipfs.w3s.link/${fileName}`,
+      `https://ipfs-gateway.koii.live/ipfs/${cid}/${fileName}`,
+      `https://${cid}.ipfs.dweb.link/${fileName}`,
+      `https://gateway.ipfs.io/ipfs/${cid}/${fileName}`,
+      `https://ipfs.io/ipfs/${cid}/${fileName}`,
+      `https://ipfs.eth.aragon.network/ipfs/${cid}/${fileName}`,
+    ]
+
+    for (const url of listOfIpfsGatewaysUrls) {
+      try {
+        const response = await this.fetchWithTimeout(url)
+        const fileContent = await response.text()
+        const couldNotFetchActualFileContent = fileContent.startsWith('<')
+
+        if (!couldNotFetchActualFileContent) {
+          return fileContent
+        }
+
+        console.log(`Gateway failed at ${url}, trying next if available.`)
+      } catch (error) {
+        console.error(`Error fetching from ${url}:`, error)
+      }
+    }
+
+    throw Error(`Failed to get ${cid} from IPFS`)
   }
 
   async distributionListSubmissionOnChain(
@@ -1128,13 +1235,10 @@ class NamespaceWrapper implements TaskNode {
   }
   getTestingStakingWallet(): Keypair {
     if (process.env.STAKING_WALLET_PATH) {
-      const wallet = readFileSync(process.env.STAKING_WALLET_PATH, "utf-8");
-      return Keypair.fromSecretKey(
-          Uint8Array.from(JSON.parse(wallet))
-      );
-    }
-    else {
-      return new Keypair();
+      const wallet = readFileSync(process.env.STAKING_WALLET_PATH, 'utf-8')
+      return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(wallet)))
+    } else {
+      return new Keypair()
     }
   }
 }
