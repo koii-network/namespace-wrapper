@@ -1,6 +1,6 @@
 {
   "name": "@_koii/namespace-wrapper",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Koii Task Utility Package",
   "main": "dist/index.js",
   "scripts": {
