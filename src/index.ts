@@ -543,7 +543,7 @@ class NamespaceWrapper implements TaskNode {
       if (
         this.testingTaskState!.submissions_audit_trigger[round] &&
         this.testingTaskState!.submissions_audit_trigger[round][
-          candidatePubkey.toBase58()
+        candidatePubkey.toBase58()
         ]
       ) {
         this.testingTaskState!.submissions_audit_trigger[round][
@@ -566,7 +566,7 @@ class NamespaceWrapper implements TaskNode {
   }
 
   async validateAndVoteOnNodes(
-    validate: (submissionValue: string, round: number) => Promise<boolean>,
+    validate: (submissionValue: string, round: number, nodePublicKey: string) => Promise<boolean>,
     round: number,
     useRandomSampling?: boolean,
   ): Promise<void | string> {
@@ -624,7 +624,7 @@ class NamespaceWrapper implements TaskNode {
             'SUBMISSION VALUE TO CHECK',
             values[index].submission_value,
           )
-          const isValid = await validate(values[index].submission_value, round)
+          const isValid = await validate(values[index].submission_value, round, candidatePublicKey)
           console.log(`Voting ${isValid} to ${candidatePublicKey}`)
 
           if (isValid) {
@@ -741,7 +741,7 @@ class NamespaceWrapper implements TaskNode {
       if (
         this.testingTaskState!.distributions_audit_trigger[round] &&
         this.testingTaskState!.distributions_audit_trigger[round][
-          candidatePubkey.toBase58()
+        candidatePubkey.toBase58()
         ]
       ) {
         this.testingTaskState!.distributions_audit_trigger[round][
@@ -767,6 +767,7 @@ class NamespaceWrapper implements TaskNode {
     validateDistribution: (
       submissionValue: string,
       round: number,
+      nodePublicKey: string,
     ) => Promise<boolean>,
     round: number,
     //isPreviousRoundFailed?: boolean,
@@ -826,6 +827,7 @@ class NamespaceWrapper implements TaskNode {
             isValid = await validateDistribution(
               values[i].submission_value,
               round,
+              candidatePublicKey
             )
             console.log(`Voting ${isValid} to ${candidatePublicKey}`)
 
@@ -941,8 +943,8 @@ class NamespaceWrapper implements TaskNode {
       keys =
         keySets.length > 0
           ? [...keySets[0]].filter((key) =>
-              keySets.every((set) => set.has(key)),
-            )
+            keySets.every((set) => set.has(key)),
+          )
           : []
       if (keys.length == 0) {
         console.log('No common keys found in last 3 rounds')
@@ -1130,7 +1132,7 @@ class NamespaceWrapper implements TaskNode {
     if (process.env.STAKING_WALLET_PATH) {
       const wallet = readFileSync(process.env.STAKING_WALLET_PATH, "utf-8");
       return Keypair.fromSecretKey(
-          Uint8Array.from(JSON.parse(wallet))
+        Uint8Array.from(JSON.parse(wallet))
       );
     }
     else {
