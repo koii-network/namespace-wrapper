@@ -166,6 +166,7 @@ export interface TaskNode {
     validate: (submissionValue: string, round: number) => Promise<boolean>,
     round: number,
     useRandomSampling?: boolean,
+    uploadToIPFS?: boolean,
   ): Promise<void | string>
   getTaskSubmissionInfo(round: number): Promise<TaskSubmissionState | null>
   getSubmitterAccount(): Promise<Keypair | null>

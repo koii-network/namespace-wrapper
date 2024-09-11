@@ -567,9 +567,14 @@ class NamespaceWrapper implements TaskNode {
   }
 
   async validateAndVoteOnNodes(
-    validate: (submissionValue: string, round: number) => Promise<boolean>,
+    validate: (
+      submissionValue: string,
+      round: number,
+      nodePublicKey: string,
+    ) => Promise<boolean>,
     round: number,
     useRandomSampling?: boolean,
+    uploadToIPFS = true,
   ): Promise<void | string> {
     console.log('******/  IN VOTING /******')
     useRandomSampling = useRandomSampling ?? false
@@ -627,62 +632,78 @@ class NamespaceWrapper implements TaskNode {
             values[index].submission_value,
           )
 
-          // call the function to validate signature and get the hash of data
+          let isValid = false
 
-          const cid = values[index].submission_value
+          if (uploadToIPFS) {
+            // call the function to validate signature and get the hash of data
 
-          const data = JSON.parse(
-            await this.retrieveThroughHttpGateway(
-              cid,
-              `submissionValues${round}.json`,
-            ),
-          )
+            const cid = values[index].submission_value
 
-          const receivedHash = await this.verifySignature(
-            data.signedMessage,
-            candidatePublicKey,
-          )
+            const data = JSON.parse(
+              await this.retrieveThroughHttpGateway(
+                cid,
+                `submissionValues${round}.json`,
+              ),
+            )
 
-          console.log('Received hash', receivedHash)
-          // calculate the hash from the file contents
+            const receivedHash = await this.verifySignature(
+              data.signedMessage,
+              candidatePublicKey,
+            )
 
-          const calculatedHash = crypto
-            .createHash('sha256')
-            .update(data.submission)
-            .digest('hex')
+            console.log('Received hash', receivedHash)
+            // calculate the hash from the file contents
 
-          console.log('Calculated hash', calculatedHash)
+            const calculatedHash = crypto
+              .createHash('sha256')
+              .update(data.submission)
+              .digest('hex')
 
-          // Remove the extra quotes from receivedHash.data
-          const normalizedReceivedHash = receivedHash.data?.replace(/"/g, '')
+            console.log('Calculated hash', calculatedHash)
 
-          console.log('Normalized received hash', normalizedReceivedHash)
+            // Remove the extra quotes from receivedHash.data
+            const normalizedReceivedHash = receivedHash.data?.replace(/"/g, '')
 
-          //  compare if the calculated hash is equal to the received hash
+            console.log('Normalized received hash', normalizedReceivedHash)
 
-          if (calculatedHash == normalizedReceivedHash) {
-            const isValid = await validate(data.submission, round)
-            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+            //  compare if the calculated hash is equal to the received hash
 
-            if (isValid) {
-              const submissions_audit_trigger =
-                taskAccountDataJSON.submissions_audit_trigger[round]
-              console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
-              if (
-                submissions_audit_trigger &&
-                submissions_audit_trigger[candidatePublicKey]
-              ) {
-                console.log('VOTING TRUE ON AUDIT')
-                const response = await this.auditSubmission(
-                  candidateKeyPairPublicKey,
-                  isValid,
-                  submitterAccountKeyPair!,
-                  round,
-                )
-                console.log('RESPONSE FROM AUDIT FUNCTION', response)
-              }
+            if (calculatedHash == normalizedReceivedHash) {
+              isValid = await validate(
+                data.submission,
+                round,
+                candidatePublicKey,
+              )
+              console.log(`Voting ${isValid} to ${candidatePublicKey}`)
             } else {
+              console.error('INVALID HASH')
               console.log('RAISING AUDIT / VOTING FALSE')
+              const response = await this.auditSubmission(
+                candidateKeyPairPublicKey,
+                false,
+                submitterAccountKeyPair!,
+                round,
+              )
+              console.log('RESPONSE FROM AUDIT FUNCTION', response)
+            }
+          } else {
+            isValid = await validate(
+              values[index].submission_value,
+              round,
+              candidatePublicKey,
+            )
+            console.log(`Voting ${isValid} to ${candidatePublicKey}`)
+          }
+
+          if (isValid) {
+            const submissions_audit_trigger =
+              taskAccountDataJSON.submissions_audit_trigger[round]
+            console.log('SUBMIT AUDIT TRIGGER', submissions_audit_trigger)
+            if (
+              submissions_audit_trigger &&
+              submissions_audit_trigger[candidatePublicKey]
+            ) {
+              console.log('VOTING TRUE ON AUDIT')
               const response = await this.auditSubmission(
                 candidateKeyPairPublicKey,
                 isValid,
@@ -692,11 +713,10 @@ class NamespaceWrapper implements TaskNode {
               console.log('RESPONSE FROM AUDIT FUNCTION', response)
             }
           } else {
-            console.error('INVALID HASH')
             console.log('RAISING AUDIT / VOTING FALSE')
             const response = await this.auditSubmission(
               candidateKeyPairPublicKey,
-              false,
+              isValid,
               submitterAccountKeyPair!,
               round,
             )
@@ -874,6 +894,7 @@ class NamespaceWrapper implements TaskNode {
     validateDistribution: (
       submissionValue: string,
       round: number,
+      nodePublicKey: string,
     ) => Promise<boolean>,
     round: number,
     //isPreviousRoundFailed?: boolean,
@@ -933,6 +954,7 @@ class NamespaceWrapper implements TaskNode {
             isValid = await validateDistribution(
               values[i].submission_value,
               round,
+              candidatePublicKey,
             )
             console.log(`Voting ${isValid} to ${candidatePublicKey}`)
 
