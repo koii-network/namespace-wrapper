@@ -574,7 +574,7 @@ class NamespaceWrapper implements TaskNode {
     ) => Promise<boolean>,
     round: number,
     useRandomSampling?: boolean,
-    uploadToIPFS = true,
+    uploadToIPFS = false,
   ): Promise<void | string> {
     console.log('******/  IN VOTING /******')
     useRandomSampling = useRandomSampling ?? false
