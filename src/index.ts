@@ -622,7 +622,7 @@ class NamespaceWrapper implements TaskNode {
         console.log('FOR CANDIDATE KEY', candidatePublicKey)
 
         const candidateKeyPairPublicKey = new PublicKey(candidatePublicKey)
-        if (candidatePublicKey === submitterPubkey) {
+        if (candidatePublicKey === submitterPubkey && taskNodeAdministered) {
           console.log('YOU CANNOT VOTE ON YOUR OWN SUBMISSIONS')
           continue
         }
@@ -943,7 +943,7 @@ class NamespaceWrapper implements TaskNode {
         let candidatePublicKey = keys[i]
         console.log('FOR CANDIDATE KEY', candidatePublicKey)
         let candidateKeyPairPublicKey = new PublicKey(keys[i])
-        if (candidatePublicKey == submitterPubkey) {
+        if (candidatePublicKey == submitterPubkey && taskNodeAdministered) {
           console.log('YOU CANNOT VOTE ON YOUR OWN DISTRIBUTION SUBMISSIONS')
         } else {
           try {
@@ -1003,6 +1003,7 @@ class NamespaceWrapper implements TaskNode {
     publicKey: string,
     round: number,
   ): Promise<any | null> {
+  console.log("GET DISTRIBUTION LIST CALLED")
     if (taskNodeAdministered) {
       const response = await genericHandler(
         'getDistributionList',
@@ -1018,6 +1019,7 @@ class NamespaceWrapper implements TaskNode {
         this.testingTaskState!.distribution_rewards_submission[round][
           this.testingStakingSystemAccount!.publicKey.toBase58()
         ].submission_value
+      console.log("testingDistributionList", this.testingDistributionList)
       return this.testingDistributionList![round][submissionValAcc]
     }
   }
