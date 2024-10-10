@@ -325,6 +325,9 @@ class NamespaceWrapper implements TaskNode {
       this.testingTaskState!.stake_list[
         this.testingStakingSystemAccount!.publicKey.toBase58()
       ] = stakeAmount
+      this.testingTaskState!.ip_address_list[
+        this.testingStakingSystemAccount!.publicKey.toBase58()
+      ] = 'localhost'
     }
   }
 
