@@ -327,7 +327,7 @@ class NamespaceWrapper implements TaskNode {
       ] = stakeAmount
       this.testingTaskState!.ip_address_list[
         this.testingStakingSystemAccount!.publicKey.toBase58()
-      ] = 'localhost'
+      ] = 'http://127.0.0.1:3000'
     }
   }
 
@@ -1006,7 +1006,7 @@ class NamespaceWrapper implements TaskNode {
     publicKey: string,
     round: number,
   ): Promise<any | null> {
-  console.log("GET DISTRIBUTION LIST CALLED")
+    console.log('GET DISTRIBUTION LIST CALLED')
     if (taskNodeAdministered) {
       const response = await genericHandler(
         'getDistributionList',
@@ -1022,7 +1022,7 @@ class NamespaceWrapper implements TaskNode {
         this.testingTaskState!.distribution_rewards_submission[round][
           this.testingStakingSystemAccount!.publicKey.toBase58()
         ].submission_value
-      console.log("testingDistributionList", this.testingDistributionList)
+      console.log('testingDistributionList', this.testingDistributionList)
       return this.testingDistributionList![round][submissionValAcc]
     }
   }
