@@ -418,6 +418,31 @@ class NamespaceWrapper implements TaskNode {
       return this.testingTaskState
     }
   }
+  async getTaskStateById(
+    taskId: string,
+    options: TaskStateOptions,
+    task_type: string,
+  ): Promise<TaskState | null> {
+    if (taskNodeAdministered) {
+      const response = await genericHandler(
+        'getTaskStateById',
+        taskId,
+        options,
+        task_type,
+      )
+      if (typeof response === 'number') {
+        // Handle error response (numbers)
+        console.log('Error in getting task state', response)
+        return null
+      } else {
+        // Handle successful response
+        return response
+      }
+    } else {
+      // get task state from K2
+      return this.testingTaskState
+    }
+  }
 
   async getTaskLevelDBPath(): Promise<string> {
     if (taskNodeAdministered) {
