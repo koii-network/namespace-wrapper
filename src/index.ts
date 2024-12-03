@@ -14,7 +14,7 @@ import nacl from 'tweetnacl'
 import express from 'express'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
-import { borsh_bpf_js_deserialize } from '../webasm_bincode_deserializer/bincode_js'
+// import { borsh_bpf_js_deserialize } from '../webasm_bincode_deserializer/bincode_js'
 import {
   GenericHandlerResponse,
   TaskState,
