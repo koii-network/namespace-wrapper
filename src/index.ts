@@ -14,6 +14,7 @@ import nacl from 'tweetnacl'
 import express from 'express'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
+// import { borsh_bpf_js_deserialize } from '../webasm_bincode_deserializer/bincode_js'
 import {
   GenericHandlerResponse,
   TaskState,
@@ -416,6 +417,81 @@ class NamespaceWrapper implements TaskNode {
       }
     } else {
       return this.testingTaskState
+    }
+  }
+  async getTaskStateById(
+    taskId: string,
+    task_type: string,
+    options: TaskStateOptions,
+  ): Promise<TaskState | null> {
+    if (taskNodeAdministered) {
+      const response = await genericHandler(
+        'getTaskStateById',
+        taskId,
+        options,
+        task_type,
+      )
+      if (typeof response === 'number') {
+        // Handle error response (numbers)
+        console.error('Error in getting task state', response)
+        return null
+      } else {
+        // Handle successful response
+        return response
+      }
+    } else {
+      console.log("Can't get task state by ID in testing")
+      return this.testingTaskState
+
+      // get task state from K2
+      // NOT WORKING: requires WASM which won't be included when webpacking for the desktop node
+      // const connection = new Connection(
+      //   'https://testnet.koii.network',
+      //   'confirmed',
+      // )
+      // if (task_type === 'KOII') {
+      //   try {
+      //     if (!options) options = {}
+      //     const {
+      //       is_submission_required = false,
+      //       is_distribution_required = false,
+      //       is_available_balances_required = false,
+      //       is_stake_list_required = false,
+      //     } = options
+      //     const taskAccountInfo = await connection.getTaskAccountInfo(
+      //       new PublicKey(taskId),
+      //       is_submission_required,
+      //       is_distribution_required,
+      //       is_available_balances_required,
+      //       is_stake_list_required,
+      //       'base64',
+      //     )
+      //     if (!taskAccountInfo) {
+      //       console.error('Error getting task account info')
+      //       return null
+      //     }
+      //     return JSON.parse(taskAccountInfo.data.toString('utf-8'))
+      //   } catch (error) {
+      //     console.error('Error in fetching task state', error)
+      //     return null
+      //   }
+      // } else {
+      //   try {
+      //     const accountInfo = await connection.getAccountInfo(
+      //       new PublicKey(new PublicKey(taskId)),
+      //     )
+      //     if (!accountInfo) {
+      //       console.error('Error in getting task account info')
+      //       return null
+      //     }
+      //     const buffer = accountInfo.data
+      //     const taskState = borsh_bpf_js_deserialize(buffer)
+      //     return parseTaskState(taskState)
+      //   } catch (error) {
+      //     console.error('Error in fetching task state', error)
+      //     return null
+      //   }
+      // }
     }
   }
 
@@ -1288,6 +1364,47 @@ async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {
     console.error(err?.response?.data)
     return { error: err }
   }
+}
+
+function parseTaskState(taskState) {
+  taskState.stake_list = objectify(taskState.stake_list, true)
+  taskState.ip_address_list = objectify(taskState.ip_address_list, true)
+  taskState.distributions_audit_record = objectify(
+    taskState.distributions_audit_record,
+    true,
+  )
+  taskState.distributions_audit_trigger = objectify(
+    taskState.distributions_audit_trigger,
+    true,
+  )
+  taskState.submissions = objectify(taskState.submissions, true)
+  taskState.submissions_audit_trigger = objectify(
+    taskState.submissions_audit_trigger,
+    true,
+  )
+  taskState.distribution_rewards_submission = objectify(
+    taskState.distribution_rewards_submission,
+    true,
+  )
+  taskState.available_balances = objectify(taskState.available_balances, true)
+  return taskState
+}
+
+function objectify(data, recursive = false) {
+  if (data instanceof Map) {
+    const obj = Object.fromEntries(data)
+    if (recursive) {
+      for (const key in obj) {
+        if (obj[key] instanceof Map) {
+          obj[key] = objectify(obj[key], true)
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+          obj[key] = objectify(obj[key], true)
+        }
+      }
+    }
+    return obj
+  }
+  return data
 }
 
 const namespaceWrapper = new NamespaceWrapper()
