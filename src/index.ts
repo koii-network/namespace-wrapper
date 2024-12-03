@@ -420,8 +420,8 @@ class NamespaceWrapper implements TaskNode {
   }
   async getTaskStateById(
     taskId: string,
-    options: TaskStateOptions,
     task_type: string,
+    options: TaskStateOptions,
   ): Promise<TaskState | null> {
     if (taskNodeAdministered) {
       const response = await genericHandler(
@@ -432,7 +432,7 @@ class NamespaceWrapper implements TaskNode {
       )
       if (typeof response === 'number') {
         // Handle error response (numbers)
-        console.log('Error in getting task state', response)
+        console.error('Error in getting task state', response)
         return null
       } else {
         // Handle successful response
@@ -440,7 +440,36 @@ class NamespaceWrapper implements TaskNode {
       }
     } else {
       // get task state from K2
-      return this.testingTaskState
+      if (task_type === 'KOII') {
+        try {
+          if (!options) options = {}
+          const {
+            is_submission_required = false,
+            is_distribution_required = false,
+            is_available_balances_required = false,
+            is_stake_list_required = false,
+          } = options
+
+          const taskAccountInfo = await connection.getTaskAccountInfo(
+            new PublicKey(taskId),
+            is_submission_required,
+            is_distribution_required,
+            is_available_balances_required,
+            is_stake_list_required,
+            'base64',
+          )
+          if (!taskAccountInfo) {
+            console.error('Error getting task account info')
+            return null
+          }
+          return JSON.parse(taskAccountInfo.data.toString('utf-8'))
+        } catch (error) {
+          console.error('Error in fetching task state', error)
+          return null
+        }
+      } else {
+        return this.testingTaskState
+      }
     }
   }
 
