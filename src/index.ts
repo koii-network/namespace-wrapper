@@ -440,53 +440,57 @@ class NamespaceWrapper implements TaskNode {
         return response
       }
     } else {
+      return this.testingTaskState
+
       // get task state from K2
-      if (task_type === 'KOII') {
-        try {
-          if (!options) options = {}
-          const {
-            is_submission_required = false,
-            is_distribution_required = false,
-            is_available_balances_required = false,
-            is_stake_list_required = false,
-          } = options
-
-          const taskAccountInfo = await connection.getTaskAccountInfo(
-            new PublicKey(taskId),
-            is_submission_required,
-            is_distribution_required,
-            is_available_balances_required,
-            is_stake_list_required,
-            'base64',
-          )
-          if (!taskAccountInfo) {
-            console.error('Error getting task account info')
-            return null
-          }
-          return JSON.parse(taskAccountInfo.data.toString('utf-8'))
-        } catch (error) {
-          console.error('Error in fetching task state', error)
-          return null
-        }
-      } else {
-        try {
-          const accountInfo = await connection.getAccountInfo(
-            new PublicKey(new PublicKey(taskId)),
-          )
-
-          if (!accountInfo) {
-            console.error('Error in getting task account info')
-            return null
-          }
-
-          const buffer = accountInfo.data
-          const taskState = borsh_bpf_js_deserialize(buffer)
-          return parseTaskState(taskState)
-        } catch (error) {
-          console.error('Error in fetching task state', error)
-          return null
-        }
-      }
+      // NOT WORKING: requires WASM which won't be included when webpacking for the desktop node
+      // const connection = new Connection(
+      //   'https://testnet.koii.network',
+      //   'confirmed',
+      // )
+      // if (task_type === 'KOII') {
+      //   try {
+      //     if (!options) options = {}
+      //     const {
+      //       is_submission_required = false,
+      //       is_distribution_required = false,
+      //       is_available_balances_required = false,
+      //       is_stake_list_required = false,
+      //     } = options
+      //     const taskAccountInfo = await connection.getTaskAccountInfo(
+      //       new PublicKey(taskId),
+      //       is_submission_required,
+      //       is_distribution_required,
+      //       is_available_balances_required,
+      //       is_stake_list_required,
+      //       'base64',
+      //     )
+      //     if (!taskAccountInfo) {
+      //       console.error('Error getting task account info')
+      //       return null
+      //     }
+      //     return JSON.parse(taskAccountInfo.data.toString('utf-8'))
+      //   } catch (error) {
+      //     console.error('Error in fetching task state', error)
+      //     return null
+      //   }
+      // } else {
+      //   try {
+      //     const accountInfo = await connection.getAccountInfo(
+      //       new PublicKey(new PublicKey(taskId)),
+      //     )
+      //     if (!accountInfo) {
+      //       console.error('Error in getting task account info')
+      //       return null
+      //     }
+      //     const buffer = accountInfo.data
+      //     const taskState = borsh_bpf_js_deserialize(buffer)
+      //     return parseTaskState(taskState)
+      //   } catch (error) {
+      //     console.error('Error in fetching task state', error)
+      //     return null
+      //   }
+      // }
     }
   }
 
