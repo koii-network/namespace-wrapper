@@ -444,15 +444,15 @@ class NamespaceWrapper implements TaskNode {
         process.env.K2_URL || 'https://testnet.koii.network',
         'confirmed',
       )
+      if (!options) options = {}
+      const {
+        is_submission_required = false,
+        is_distribution_required = false,
+        is_available_balances_required = false,
+        is_stake_list_required = false,
+      } = options
       if (task_type === 'KOII') {
         try {
-          if (!options) options = {}
-          const {
-            is_submission_required = false,
-            is_distribution_required = false,
-            is_available_balances_required = false,
-            is_stake_list_required = false,
-          } = options
           const taskAccountInfo = await connection.getTaskAccountInfo(
             new PublicKey(taskId),
             is_submission_required,
@@ -486,7 +486,13 @@ class NamespaceWrapper implements TaskNode {
           }
           const buffer = accountInfo.data
           const taskState = borsh_bpf_js_deserialize(buffer)
-          return parseTaskState(taskState)
+          return parseTaskState(
+            taskState,
+            is_submission_required,
+            is_distribution_required,
+            is_available_balances_required,
+            is_stake_list_required,
+          )
         } catch (error) {
           console.error('Error in fetching task state', error)
           return null
@@ -1366,27 +1372,53 @@ async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {
   }
 }
 
-function parseTaskState(taskState) {
-  taskState.stake_list = objectify(taskState.stake_list, true)
+function parseTaskState(
+  taskState,
+  is_submission_required = false,
+  is_distribution_required = false,
+  is_available_balances_required = false,
+  is_stake_list_required = false,
+) {
+  if (is_stake_list_required) {
+    taskState.stake_list = objectify(taskState.stake_list, true)
+  } else {
+    taskState.stake_list = {}
+  }
   taskState.ip_address_list = objectify(taskState.ip_address_list, true)
-  taskState.distributions_audit_record = objectify(
-    taskState.distributions_audit_record,
-    true,
-  )
-  taskState.distributions_audit_trigger = objectify(
-    taskState.distributions_audit_trigger,
-    true,
-  )
-  taskState.submissions = objectify(taskState.submissions, true)
-  taskState.submissions_audit_trigger = objectify(
-    taskState.submissions_audit_trigger,
-    true,
-  )
-  taskState.distribution_rewards_submission = objectify(
-    taskState.distribution_rewards_submission,
-    true,
-  )
-  taskState.available_balances = objectify(taskState.available_balances, true)
+  if (is_distribution_required) {
+    taskState.distributions_audit_record = objectify(
+      taskState.distributions_audit_record,
+      true,
+    )
+    taskState.distributions_audit_trigger = objectify(
+      taskState.distributions_audit_trigger,
+      true,
+    )
+    taskState.distribution_rewards_submission = objectify(
+      taskState.distribution_rewards_submission,
+      true,
+    )
+  } else {
+    taskState.distributions_audit_record = {}
+    taskState.distributions_audit_trigger = {}
+    taskState.distribution_rewards_submission = {}
+  }
+  if (is_submission_required) {
+    taskState.submissions = objectify(taskState.submissions, true)
+    taskState.submissions_audit_trigger = objectify(
+      taskState.submissions_audit_trigger,
+      true,
+    )
+  } else {
+    taskState.submissions = {}
+    taskState.submissions_audit_trigger = {}
+  }
+
+  if (is_available_balances_required) {
+    taskState.available_balances = objectify(taskState.available_balances, true)
+  } else {
+    taskState.available_balances = {}
+  }
   return taskState
 }
 
