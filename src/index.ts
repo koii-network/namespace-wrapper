@@ -14,7 +14,6 @@ import nacl from 'tweetnacl'
 import express from 'express'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
-// import { borsh_bpf_js_deserialize } from '../webasm_bincode_deserializer/bincode_js'
 import {
   GenericHandlerResponse,
   TaskState,
@@ -440,58 +439,65 @@ class NamespaceWrapper implements TaskNode {
         return response
       }
     } else {
-      console.log("Can't get task state by ID in testing")
-      return this.testingTaskState
-
       // get task state from K2
-      // NOT WORKING: requires WASM which won't be included when webpacking for the desktop node
-      // const connection = new Connection(
-      //   'https://testnet.koii.network',
-      //   'confirmed',
-      // )
-      // if (task_type === 'KOII') {
-      //   try {
-      //     if (!options) options = {}
-      //     const {
-      //       is_submission_required = false,
-      //       is_distribution_required = false,
-      //       is_available_balances_required = false,
-      //       is_stake_list_required = false,
-      //     } = options
-      //     const taskAccountInfo = await connection.getTaskAccountInfo(
-      //       new PublicKey(taskId),
-      //       is_submission_required,
-      //       is_distribution_required,
-      //       is_available_balances_required,
-      //       is_stake_list_required,
-      //       'base64',
-      //     )
-      //     if (!taskAccountInfo) {
-      //       console.error('Error getting task account info')
-      //       return null
-      //     }
-      //     return JSON.parse(taskAccountInfo.data.toString('utf-8'))
-      //   } catch (error) {
-      //     console.error('Error in fetching task state', error)
-      //     return null
-      //   }
-      // } else {
-      //   try {
-      //     const accountInfo = await connection.getAccountInfo(
-      //       new PublicKey(new PublicKey(taskId)),
-      //     )
-      //     if (!accountInfo) {
-      //       console.error('Error in getting task account info')
-      //       return null
-      //     }
-      //     const buffer = accountInfo.data
-      //     const taskState = borsh_bpf_js_deserialize(buffer)
-      //     return parseTaskState(taskState)
-      //   } catch (error) {
-      //     console.error('Error in fetching task state', error)
-      //     return null
-      //   }
-      // }
+      const connection = new Connection(
+        process.env.K2_URL || 'https://testnet.koii.network',
+        'confirmed',
+      )
+      if (!options) options = {}
+      const {
+        is_submission_required = false,
+        is_distribution_required = false,
+        is_available_balances_required = false,
+        is_stake_list_required = false,
+      } = options
+      if (task_type === 'KOII') {
+        try {
+          const taskAccountInfo = await connection.getTaskAccountInfo(
+            new PublicKey(taskId),
+            is_submission_required,
+            is_distribution_required,
+            is_available_balances_required,
+            is_stake_list_required,
+            'base64',
+          )
+          if (!taskAccountInfo) {
+            console.error('Error getting task account info')
+            return null
+          }
+          return JSON.parse(taskAccountInfo.data.toString('utf-8'))
+        } catch (error) {
+          console.error('Error in fetching task state', error)
+          return null
+        }
+      } else {
+        const bincode_js = await import(
+          /* webpackIgnore: true */
+          '../webasm_bincode_deserializer/bincode_js'
+        )
+        const borsh_bpf_js_deserialize = bincode_js.borsh_bpf_js_deserialize
+        try {
+          const accountInfo = await connection.getAccountInfo(
+            new PublicKey(taskId),
+          )
+          if (!accountInfo) {
+            console.error('Error in getting task account info')
+            return null
+          }
+          const buffer = accountInfo.data
+          const taskState = borsh_bpf_js_deserialize(buffer)
+          return parseTaskState(
+            taskState,
+            is_submission_required,
+            is_distribution_required,
+            is_available_balances_required,
+            is_stake_list_required,
+          )
+        } catch (error) {
+          console.error('Error in fetching task state', error)
+          return null
+        }
+      }
     }
   }
 
@@ -1366,27 +1372,53 @@ async function genericHandler(...args: any[]): Promise<GenericHandlerResponse> {
   }
 }
 
-function parseTaskState(taskState) {
-  taskState.stake_list = objectify(taskState.stake_list, true)
+function parseTaskState(
+  taskState,
+  is_submission_required = false,
+  is_distribution_required = false,
+  is_available_balances_required = false,
+  is_stake_list_required = false,
+) {
+  if (is_stake_list_required) {
+    taskState.stake_list = objectify(taskState.stake_list, true)
+  } else {
+    taskState.stake_list = {}
+  }
   taskState.ip_address_list = objectify(taskState.ip_address_list, true)
-  taskState.distributions_audit_record = objectify(
-    taskState.distributions_audit_record,
-    true,
-  )
-  taskState.distributions_audit_trigger = objectify(
-    taskState.distributions_audit_trigger,
-    true,
-  )
-  taskState.submissions = objectify(taskState.submissions, true)
-  taskState.submissions_audit_trigger = objectify(
-    taskState.submissions_audit_trigger,
-    true,
-  )
-  taskState.distribution_rewards_submission = objectify(
-    taskState.distribution_rewards_submission,
-    true,
-  )
-  taskState.available_balances = objectify(taskState.available_balances, true)
+  if (is_distribution_required) {
+    taskState.distributions_audit_record = objectify(
+      taskState.distributions_audit_record,
+      true,
+    )
+    taskState.distributions_audit_trigger = objectify(
+      taskState.distributions_audit_trigger,
+      true,
+    )
+    taskState.distribution_rewards_submission = objectify(
+      taskState.distribution_rewards_submission,
+      true,
+    )
+  } else {
+    taskState.distributions_audit_record = {}
+    taskState.distributions_audit_trigger = {}
+    taskState.distribution_rewards_submission = {}
+  }
+  if (is_submission_required) {
+    taskState.submissions = objectify(taskState.submissions, true)
+    taskState.submissions_audit_trigger = objectify(
+      taskState.submissions_audit_trigger,
+      true,
+    )
+  } else {
+    taskState.submissions = {}
+    taskState.submissions_audit_trigger = {}
+  }
+
+  if (is_available_balances_required) {
+    taskState.available_balances = objectify(taskState.available_balances, true)
+  } else {
+    taskState.available_balances = {}
+  }
   return taskState
 }
 
