@@ -439,9 +439,6 @@ class NamespaceWrapper implements TaskNode {
         return response
       }
     } else {
-      // console.log("Can't get task state by ID in testing")
-      // return this.testingTaskState
-
       // get task state from K2
       const connection = new Connection(
         process.env.K2_URL || 'https://testnet.koii.network',
