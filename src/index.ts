@@ -470,7 +470,7 @@ class NamespaceWrapper implements TaskNode {
           console.error('Error in fetching task state', error)
           return null
         }
-      } else {
+      } else if (task_type === 'KPL') {
         const bincode_js = await import(
           /* webpackIgnore: true */
           '../webasm_bincode_deserializer/bincode_js'
@@ -497,6 +497,8 @@ class NamespaceWrapper implements TaskNode {
           console.error('Error in fetching task state', error)
           return null
         }
+      } else {
+        throw new Error('Task type is required')
       }
     }
   }
