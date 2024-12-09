@@ -204,3 +204,5 @@ export interface TaskNode {
     isPreviousRoundFailed: boolean,
   ): Promise<void>
 }
+
+export type TaskType = 'KPL' | 'KOII'
