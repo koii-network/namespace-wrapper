@@ -22,6 +22,7 @@ import {
   TaskDistributionInfo,
   LogLevel,
   TaskStateOptions,
+  TaskType,
 } from './types'
 
 dotenv.config()
@@ -420,7 +421,7 @@ class NamespaceWrapper implements TaskNode {
   }
   async getTaskStateById(
     taskId: string,
-    task_type: string,
+    task_type: TaskType,
     options: TaskStateOptions,
   ): Promise<TaskState | null> {
     if (taskNodeAdministered) {
