@@ -25,6 +25,10 @@ yarn add @_koii/namespace-wrapper
 import { namespaceWrapper } from '@_koii/namespace-wrapper';
 ```
 
+```javascript
+const { namespaceWrapper } = require("@_koii/namespace-wrapper");
+```
+
 ## Key Features
 - **State Management**: Persistent storage using NeDB for task-specific data
 - **Blockchain Integration**: Direct interface with Koii Network through Web3.js
@@ -78,7 +82,6 @@ try {
   const value = await namespaceWrapper.storeGet("myKey");
 } catch (error) {
   console.error(error);
-  // Output: Error: Failed to connect to database: ECONNREFUSED
 }
 ```
 
@@ -118,16 +121,6 @@ try {
   await namespaceWrapper.storeSet("taskConfig", undefined);
 } catch (error) {
   console.error(error);
-  // Output: Error: Value must be a string
-}
-
-// Error case (storage limit exceeded)
-try {
-  const largeData = "x".repeat(10000000); // Very large string
-  await namespaceWrapper.storeSet("largeKey", largeData);
-} catch (error) {
-  console.error(error);
-  // Output: Error: Storage limit exceeded
 }
 ```
 
@@ -136,7 +129,7 @@ try {
 #### fs(method: string, path: string, ...args: any[]): Promise<any>
 - **Description**: Executes file system operations in a standardized way
 - **Inputs**:
-  - method: File system method to execute
+  - method: File system method to execute [check methods here](https://docs.deno.com/api/node/fs/promises/)
   - path: File path
   - args: Additional arguments for the method
 - **Outputs**: Promise resolving to the operation result
@@ -191,7 +184,6 @@ try {
   const writeStream = await namespaceWrapper.fsWriteStream("/invalid/path/image.jpg");
 } catch (error) {
   console.error(error);
-  // Output: Error: ENOENT: no such file or directory
 }
 
 // Error case (permission denied)
@@ -199,7 +191,6 @@ try {
   const writeStream = await namespaceWrapper.fsWriteStream("/root/restricted.jpg");
 } catch (error) {
   console.error(error);
-  // Output: Error: EACCES: permission denied
 }
 ```
 
@@ -222,21 +213,20 @@ try {
   const buffer = await namespaceWrapper.fsReadStream("nonexistent.jpg");
 } catch (error) {
   console.error(error);
-  // Output: Error: ENOENT: no such file or directory
+}
 
 // Error case (corrupted file)
 try {
   const buffer = await namespaceWrapper.fsReadStream("corrupted.jpg");
 } catch (error) {
   console.error(error);
-  // Output: Error: Invalid file format
 }
 ```
 
 ### Blockchain Operations
 
 #### payloadSigning(body: Record<string, unknown>): Promise<string | void>
-- **Description**: Signs a payload for blockchain transactions
+- **Description**: Signs a payload for blockchain transactions using the main wallet's public key.
 - **Inputs**:
   - body: Object containing the payload data
 - **Outputs**: Promise resolving to the signed message
@@ -258,14 +248,13 @@ try {
   const signedPayload = await namespaceWrapper.payloadSigning(undefined);
 } catch (error) {
   console.error(error);
-  // Output: Error: Invalid payload: Payload must be a non-null object
+}
 
 // Error case (missing key)
 try {
   const signedPayload = await namespaceWrapper.payloadSigning({});
 } catch (error) {
   console.error(error);
-  // Output: Error: Failed to sign payload: No signing key available
 }
 ```
 
@@ -428,17 +417,7 @@ try {
   //   err: null
   // }
 } catch (error) {
-  // Error case (insufficient funds)
   console.error(error);
-  // Output: Error: Transaction failed: Insufficient funds
-
-  // Error case (invalid account)
-  console.error(error);
-  // Output: Error: Invalid account: Account not found
-
-  // Error case (network error)
-  console.error(error);
-  // Output: Error: Network error: Unable to reach node
 }
 ```
 
@@ -490,17 +469,7 @@ try {
   //   "claimedRounds": [1, 2, 3, 4, 5]
   // }
 } catch (error) {
-  // Error case (already claimed)
   console.error(error);
-  // Output: Error: Rewards for round 5 already claimed
-
-  // Error case (invalid round)
-  console.error(error);
-  // Output: Error: Invalid round: Round not completed
-
-  // Error case (no rewards)
-  console.error(error);
-  // Output: Error: No rewards available for round 5
 }
 ```
 
@@ -616,7 +585,6 @@ try {
   const info = await namespaceWrapper.getTaskSubmissionInfo();
 } catch (error) {
   console.error(error);
-  // Output: Error: Failed to fetch submission info: Network error
 }
 ```
 
@@ -713,17 +681,7 @@ try {
   //   signature: "dist_sig_123..."
   // }
 } catch (error) {
-  // Error case (invalid format)
-  console.error(error);
-  // Output: Error: Invalid distribution list format
-
-  // Error case (round mismatch)
-  console.error(error);
-  // Output: Error: Distribution list round mismatch
-
-  // Error case (duplicate upload)
-  console.error(error);
-  // Output: Error: Distribution list already exists for round 10
+  console.error(error)
 }
 ```
 
@@ -774,17 +732,7 @@ try {
   //   }
   // }
 } catch (error) {
-  // Error case (invalid submission)
   console.error(error);
-  // Output: Error: Invalid submission value format
-
-  // Error case (round not found)
-  console.error(error);
-  // Output: Error: Round 10 not found in distribution list
-
-  // Error case (audit already completed)
-  console.error(error);
-  // Output: Error: Audit already completed for round 10
 }
 ```
 
