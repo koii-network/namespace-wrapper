@@ -25,19 +25,6 @@ yarn add @_koii/namespace-wrapper
 import { namespaceWrapper } from '@_koii/namespace-wrapper';
 ```
 
-2. Initialize environment variables in your `.env` file:
-```env
-TASK_NAME=MyKoiiTask
-TASK_ID=your_task_id
-EXPRESS_PORT=3000
-...
-```
-
-3. Initialize the wrapper in your task:
-```typescript
-await namespaceWrapper.initializeDB();
-```
-
 ## Key Features
 - **State Management**: Persistent storage using NeDB for task-specific data
 - **Blockchain Integration**: Direct interface with Koii Network through Web3.js
@@ -47,21 +34,19 @@ await namespaceWrapper.initializeDB();
 - **Logging System**: Structured logging capabilities for debugging and monitoring
 - **Express Server**: Built-in HTTP server for task communication
 
-## Environment Variables
-Note: These variables are not needed when using the Koii Task Template.
+## NamespaceWrapper Importable Variables
 
-| Variable | Example Value | Description | Required |
-|----------|--------------|-------------|-----------|
-| TASK_NAME | "MyKoiiTask" | Name of the task | Yes |
-| TASK_ID | "task_12345..." | Unique identifier for the task | Yes |
-| EXPRESS_PORT | 3000 | Port for the Express server | No (defaults to 3000) |
-| MAIN_ACCOUNT_PUBKEY | "pubkey123..." | Main account public key | Yes |
-| SECRET_KEY | "secret123..." | Secret key for signing transactions | Yes |
-| K2_NODE_URL | "https://testnet.koii.network" | Koii network node URL | No (defaults to testnet) |
-| SERVICE_URL | "http://localhost:8080" | Service endpoint URL | Yes |
-| STAKE | 1000 | Stake amount in KOII | Yes |
-| TASK_NODE_PORT | 8000 | Port for task node communication | Yes |
-| STAKING_WALLET_PATH | "./wallet.json" | Path to staking wallet file | No |
+| Variable | Example Value | Description |
+|----------|--------------|-------------|
+| TASK_NAME | "MyKoiiTask" | Name of the task |
+| TASK_ID | "task_12345..." | Unique identifier for the task |
+| EXPRESS_PORT | 3000 | Port for the Express server |
+| MAIN_ACCOUNT_PUBKEY | "pubkey123..." | Main account public key |
+| K2_NODE_URL | "https://testnet.koii.network" | Koii network node URL |
+| SERVICE_URL | "http://localhost:8080" | Service endpoint URL |
+| STAKE | 1000 | Stake amount in KOII |
+| TASK_NODE_PORT | 8000 | Port for task node communication |
+| STAKING_WALLET_PATH | "./wallet.json" | Path to staking wallet file |
 
 ## Exported Functions
 
