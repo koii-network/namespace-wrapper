@@ -299,12 +299,57 @@ console.log(mismatchResult);
 - **Description**: Retrieves the current state of the task
 - **Inputs**:
   - options: Configuration options for state retrieval
+  {
+    is_submission_required?: boolean,     
+    is_distribution_required?: boolean,   
+    is_available_balances_required?: boolean,
+    is_stake_list_required?: boolean      
+  }
 - **Outputs**: Promise resolving to task state object
 - **Example Usage**:
 ```typescript
+// Data will be included if true, otherwise not shown even if fields are present.
 const state = await namespaceWrapper.getTaskState({
-  is_submission_required: true
+  is_submission_required: true,      // Whether to include submission data
+  is_distribution_required: true,    // Whether to include distribution data
+  is_available_balances_required: true, // Whether to include balance data
+  is_stake_list_required: true      // Whether to include stake list
 });
+
+// {
+//   task_id: string,                      // Unique identifier for the task
+//   task_name: string,                    // Name of the task
+//   task_manager: PublicKey,              // Task manager's public key
+//   is_allowlisted: boolean,              // Whether task is allowlisted
+//   is_active: boolean,                   // Whether task is active
+//   task_audit_program: string,           // Audit program identifier
+//   stake_pot_account: PublicKey,         // Staking pot account
+//   total_bounty_amount: number,          // Total bounty for the task
+//   bounty_amount_per_round: number,      // Bounty per round
+//   current_round: number,                // Current round number
+//   available_balances: Record<string, number>, // Available balances per account
+//   stake_list: Record<string, number>,   // List of stakers and amounts
+//   task_metadata: string,                // Task metadata
+//   task_description: string,             // Task description
+//   submissions: SubmissionsPerRound,     // Submissions for each round
+//   submissions_audit_trigger: Record<string, Record<string, AuditTriggerState>>, // Audit triggers
+//   total_stake_amount: number,           // Total staked amount
+//   minimum_stake_amount: number,         // Minimum required stake
+//   ip_address_list: Record<string, string>, // List of node IPs
+//   round_time: number,                   // Time per round
+//   starting_slot: number,                // Starting slot number
+//   audit_window: number,                 // Audit window duration
+//   submission_window: number,            // Submission window duration
+//   task_executable_network: 'IPFS' | 'ARWEAVE', // Network type
+//   distribution_rewards_submission: SubmissionsPerRound, // Reward distributions
+//   distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>, // Distribution audit triggers
+//   distributions_audit_record: Record<string, 'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'>, // Audit records
+//   task_vars: string,                    // Task-specific variables
+//   koii_vars: string,                    // Koii network variables
+//   is_migrated: boolean,                 // Migration status
+//   migrated_to: string,                  // Migration target
+//   allowed_failed_distributions: number   // Max allowed failed distributions
+// }
 ```
 
 #### validateAndVoteOnNodes(validate: Function, round: number): Promise<void | string>
@@ -463,11 +508,6 @@ try {
     is_available_balances_required: true
   });
   console.log(rewardStatus.available_balances);
-  // Output: {
-  //   "koiiX8UPJY6...": 1000,  // Updated balance after claim
-  //   "previousRewards": 5000,
-  //   "claimedRounds": [1, 2, 3, 4, 5]
-  // }
 } catch (error) {
   console.error(error);
 }
