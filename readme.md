@@ -56,32 +56,59 @@ const { namespaceWrapper } = require("@_koii/namespace-wrapper");
 
 ### Core Functions
 
-#### storeGet(key: string): Promise<string | null>
-- **Description**: Retrieves a value from the persistent storage
-- **Inputs**: 
-  - key: String identifier for the stored value
-- **Outputs**: Promise resolving to the stored value or null
+#### getDb(): Promise<void>
+- **Description**: get the KOIIDB
 - **Example Usage and Output**:
 ```typescript
-// Successful retrieval
-const value = await namespaceWrapper.storeGet("taskConfig");
-console.log(value);
-// Output: {
-//   "roundDuration": 3600,
-//   "minStake": 1000,
-//   "lastUpdateTime": 1678234567890
-// }
-
-// Key not found
-const missingValue = await namespaceWrapper.storeGet("nonexistentKey");
-console.log(missingValue);
-// Output: null
-
-// Error case (database connection issue)
 try {
-  const value = await namespaceWrapper.storeGet("myKey");
+  const db = await namespaceWrapper.getDb();
+
+  // Insert a document into the database
+  const insertResult = await db.insert({ name: "John Doe", age: 30 });
+  console.log("Insert result:", insertResult);
+
+  // Find documents matching a query
+  const foundDocs = await db.find({ age: { $gt: 20 } });
+  console.log("Found documents:", foundDocs);
+
+  // Find a single document matching a query
+  const singleDoc = await db.findOne({ name: "John Doe" });
+  console.log("Single document:", singleDoc);
+
+  // Update documents matching a query
+  const updateResult = await db.update({ name: "John Doe" }, { $set: { age: 31 } });
+  console.log("Update result:", updateResult);
+
+  // Remove documents matching a query
+  const removeResult = await db.remove({ age: { $lt: 25 } });
+  console.log("Remove result:", removeResult);
+
+  // Count documents matching a query
+  const count = await db.count({ age: { $gt: 20 } });
+  console.log("Count of matching documents:", count);
+
+  // Load the database
+  const loadResult = await db.loadDatabase();
+  console.log("Load database result:", loadResult);
+
+  // Ensure an index is created for a particular field
+  const ensureIndexResult = await db.ensureIndex({ fieldName: "name" });
+  console.log("Ensure index result:", ensureIndexResult);
+
+  // Get all data from the database
+  const allData = await db.getAllData();
+  console.log("All data in the database:", allData);
+
+  // Compact the data file
+  const compactDataResult = await db.persistenceCompactData();
+  console.log("Compact data result:", compactDataResult);
+
+  // Persist data to disk
+  const persistResult = await db.persistencePersist();
+  console.log("Persist result:", persistResult);
+
 } catch (error) {
-  console.error(error);
+  console.error("An error occurred:", error);
 }
 ```
 
@@ -119,6 +146,35 @@ console.log(JSON.parse(stored));
 // Error case (invalid value)
 try {
   await namespaceWrapper.storeSet("taskConfig", undefined);
+} catch (error) {
+  console.error(error);
+}
+```
+
+#### storeGet(key: string): Promise<string | null>
+- **Description**: Retrieves a value from the persistent storage
+- **Inputs**: 
+  - key: String identifier for the stored value
+- **Outputs**: Promise resolving to the stored value or null
+- **Example Usage and Output**:
+```typescript
+// Successful retrieval
+const value = await namespaceWrapper.storeGet("taskConfig");
+console.log(value);
+// Output: {
+//   "roundDuration": 3600,
+//   "minStake": 1000,
+//   "lastUpdateTime": 1678234567890
+// }
+
+// Key not found
+const missingValue = await namespaceWrapper.storeGet("nonexistentKey");
+console.log(missingValue);
+// Output: null
+
+// Error case (database connection issue)
+try {
+  const value = await namespaceWrapper.storeGet("myKey");
 } catch (error) {
   console.error(error);
 }
@@ -166,8 +222,11 @@ console.log(data);
 - **Outputs**: Promise resolving to a WriteStream object
 - **Example Usage and Output**:
 ```typescript
+const getBasePath = await namespaceWrapper.getBasePath();
+const imgPath = `${getBasePath}/img/output.jpg`;
+
 // Successful write stream creation and usage
-const writeStream = await namespaceWrapper.fsWriteStream("output.jpg");
+const writeStream = await namespaceWrapper.fsWriteStream(imgPath);
 if (writeStream) {
   // Write image data
   writeStream.write(imageBuffer);
@@ -201,8 +260,11 @@ try {
 - **Outputs**: Promise resolving to a Buffer
 - **Example Usage and Output**:
 ```typescript
+const getBasePath = await namespaceWrapper.getBasePath();
+const imgPath = `${getBasePath}/img/output.jpg`;
+
 // Successful read
-const imageBuffer = await namespaceWrapper.fsReadStream("input.jpg");
+const imageBuffer = await namespaceWrapper.fsReadStream(imgPath);
 console.log(imageBuffer);
 // Output: <Buffer ff d8 ff e0 00 10 4a 46 49 46 ...>
 console.log(imageBuffer.length);
@@ -271,10 +333,16 @@ const result = await namespaceWrapper.verifySignature(
   "2J7PRqTxj1NVnYzgx2KBGz4KRJHEwzT8GJkHxb6J1q9B4K8rYt5JvKq7rz3vXqH...",
   "koiiX8UPJY6gCMqD1RfNoQhWiJzyPwXX2Cj7vqWe9mV"
 );
-console.log(result);
-// Output: {
-//   data: "{\"data\":\"Hello World\",\"timestamp\":1678234567890,\"nonce\":0.123456789}"
-// }
+
+if (!result) {
+  console.error('Signature verification failed.');
+}
+else{
+  console.log(result);
+  // Output: {
+  //   data: "{\"data\":\"Hello World\",\"timestamp\":1678234567890,\"nonce\":0.123456789}"
+  // }
+}
 
 // Error case (invalid signature)
 const invalidResult = await namespaceWrapper.verifySignature(
@@ -282,7 +350,6 @@ const invalidResult = await namespaceWrapper.verifySignature(
   "koiiX8UPJY6gCMqD1RfNoQhWiJzyPwXX2Cj7vqWe9mV"
 );
 console.log(invalidResult);
-// Output: { error: "Invalid signature format" }
 
 // Error case (mismatched public key)
 const mismatchResult = await namespaceWrapper.verifySignature(
@@ -290,7 +357,6 @@ const mismatchResult = await namespaceWrapper.verifySignature(
   "koiiWrongPubKeyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 );
 console.log(mismatchResult);
-// Output: { error: "Signature verification failed" }
 ```
 
 ### Task Management
@@ -299,21 +365,21 @@ console.log(mismatchResult);
 - **Description**: Retrieves the current state of the task
 - **Inputs**:
   - options: Configuration options for state retrieval
-  {
-    is_submission_required?: boolean,     
-    is_distribution_required?: boolean,   
-    is_available_balances_required?: boolean,
-    is_stake_list_required?: boolean      
-  }
+    {
+      is_submission_required?: boolean,         // Whether to include submission data
+      is_distribution_required?: boolean,       // Whether to include distribution data
+      is_available_balances_required?: boolean, // Whether to include balance data
+      is_stake_list_required?: boolean          // Whether to include stake list
+    }
 - **Outputs**: Promise resolving to task state object
 - **Example Usage**:
 ```typescript
 // Data will be included if true, otherwise not shown even if fields are present.
 const state = await namespaceWrapper.getTaskState({
-  is_submission_required: true,      // Whether to include submission data
-  is_distribution_required: true,    // Whether to include distribution data
-  is_available_balances_required: true, // Whether to include balance data
-  is_stake_list_required: true      // Whether to include stake list
+  is_submission_required: true,         
+  is_distribution_required: true,       
+  is_available_balances_required: true, 
+  is_stake_list_required: true          
 });
 
 // {
@@ -360,28 +426,88 @@ const state = await namespaceWrapper.getTaskState({
 - **Outputs**: Promise resolving to validation result
 - **Example Usage**:
 ```typescript
+// Validates and votes on nodes
 await namespaceWrapper.validateAndVoteOnNodes(
   async (submission, round, nodePublicKey) => true,
   currentRound
 );
 ```
 
-#### checkSubmissionAndUpdateRound(): Promise<void>
+#### checkSubmissionAndUpdateRound(submissionValue: string = 'default', round: number): Promise<void>
 - **Description**: Verifies submissions and updates the current round
+- **Input**: Add the submission and the roundNumber
 - **Outputs**: Promise resolving when complete
 - **Example Usage**:
 ```typescript
-await namespaceWrapper.checkSubmissionAndUpdateRound();
+if(submission){
+  await namespaceWrapper.checkSubmissionAndUpdateRound(submission, roundNumber);
+}
 ```
 
-#### getTaskStateById(taskId: string): Promise<TaskState | null>
-- **Description**: Retrieves task state for a specific task ID
+#### getTaskStateById(taskId: string, task_type: TaskType, options: TaskStateOptions): Promise<TaskState | null>
+- **Description**: Retrieves task state for a specific task ID and the task type
 - **Inputs**:
   - taskId: Task identifier
+  - task_type: KOII or KPL
+  - options: TaskStateOptions
+    {
+      is_submission_required?: boolean,         // Whether to include submission data
+      is_distribution_required?: boolean,       // Whether to include distribution data
+      is_available_balances_required?: boolean, // Whether to include balance data
+      is_stake_list_required?: boolean          // Whether to include stake list
+    }
 - **Outputs**: Promise resolving to task state
 - **Example Usage**:
+<!-- from below you can get the Task id -->
 ```typescript
-const state = await namespaceWrapper.getTaskStateById("task_123");
+const { TASK_ID } from '@_koii/namespace-wrapper';
+```
+```javascript
+const { TASK_ID } = require("@_koii/namespace-wrapper");
+```
+```typescript
+const getInfo = await namespaceWrapper.getTaskStateById(TASK_ID, 'KOII', {
+  is_submission_required: true,
+  is_distribution_required: true,
+  is_available_balances_required: true,
+  is_stake_list_required: true,
+});
+
+// expected output 
+// {
+//   task_id: string,                      // Unique identifier for the task
+//   task_name: string,                    // Name of the task
+//   task_manager: PublicKey,              // Task manager's public key
+//   is_allowlisted: boolean,              // Whether task is allowlisted
+//   is_active: boolean,                   // Whether task is active
+//   task_audit_program: string,           // Audit program identifier
+//   stake_pot_account: PublicKey,         // Staking pot account
+//   total_bounty_amount: number,          // Total bounty for the task
+//   bounty_amount_per_round: number,      // Bounty per round
+//   current_round: number,                // Current round number
+//   available_balances: Record<string, number>, // Available balances per account
+//   stake_list: Record<string, number>,   // List of stakers and amounts
+//   task_metadata: string,                // Task metadata
+//   task_description: string,             // Task description
+//   submissions: SubmissionsPerRound,     // Submissions for each round
+//   submissions_audit_trigger: Record<string, Record<string, AuditTriggerState>>, // Audit triggers
+//   total_stake_amount: number,           // Total staked amount
+//   minimum_stake_amount: number,         // Minimum required stake
+//   ip_address_list: Record<string, string>, // List of node IPs
+//   round_time: number,                   // Time per round
+//   starting_slot: number,                // Starting slot number
+//   audit_window: number,                 // Audit window duration
+//   submission_window: number,            // Submission window duration
+//   task_executable_network: 'IPFS' | 'ARWEAVE', // Network type
+//   distribution_rewards_submission: SubmissionsPerRound, // Reward distributions
+//   distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>, // Distribution audit triggers
+//   distributions_audit_record: Record<string, 'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'>, // Audit records
+//   task_vars: string,                    // Task-specific variables
+//   koii_vars: string,                    // Koii network variables
+//   is_migrated: boolean,                 // Migration status
+//   migrated_to: string,                  // Migration target
+//   allowed_failed_distributions: number  // Max allowed failed distributions
+// }
 ```
 
 ### Network Operations
@@ -393,20 +519,21 @@ const state = await namespaceWrapper.getTaskStateById("task_123");
 - **Outputs**: Promise resolving to node information
 - **Example Usage and Output**:
 ```typescript
-const nodes = await namespaceWrapper.getNodes("https://api.koii.network/nodes");
+const nodes = await namespaceWrapper.getNodes("https://api.koii.network/");
 console.log(nodes);
 // Output:
-{
-  "nodes": [
-    {
-      "nodeId": "node1",
-      "status": "active",
-      "stake": 5000,
-      "uptime": 99.9
-    },
-    // ... more nodes
-  ]
-}
+// [
+//   {
+//    data: {
+//      url: string | undefined,    // Node URL
+//      timestamp: number           // Last update timestamp
+//    },
+//    signature: string,             // Node signature
+//    owner: string,                 // Node owner
+//    submitterPubkey: string        // Submitter's public key
+//    task: string                   // task ID
+//   }, ...
+// ]
 ```
 
 #### getRpcUrl(): Promise<string | void>
@@ -416,7 +543,8 @@ console.log(nodes);
 ```typescript
 const rpcUrl = await namespaceWrapper.getRpcUrl();
 console.log(rpcUrl);
-// Output: "https://testnet.koii.network"
+
+// Output: "https://testnet.koii.network" or any other specific url
 ```
 
 ### Transaction Operations
@@ -431,7 +559,7 @@ console.log(rpcUrl);
 ```typescript
 const result = await namespaceWrapper.sendAndConfirmTransactionWrapper(tx, [signer]);
 console.log(result);
-// Output: "5UfCbqmK8Qsr9mmkUyt6tFGWJxVNi3vfMr6iXLhHoTR7HEK..."
+// Output: "4Gf4kP3Qs4GpFASdeEweJnzR..." (Transaction signature as a string)
 ```
 
 #### sendTransaction(serviceNodeAccount: PublicKey, beneficiaryAccount: PublicKey, amount: number): Promise<void | string>
@@ -439,7 +567,7 @@ console.log(result);
 - **Inputs**:
   - serviceNodeAccount: Service node's public key
   - beneficiaryAccount: Recipient's public key
-  - amount: Transaction amount
+  - amount: Transaction amount (in lamports)
 - **Outputs**: Promise resolving to transaction result
 - **Example Usage and Output**:
 ```typescript
@@ -452,15 +580,6 @@ try {
   );
   console.log(txSignature);
   // Output: "4vC38p8b1BMRDmjWTgfVHZf48vJUYC7ySZkXuC6EhQzF9Ny8m2jFS93..."
-
-  // Check transaction status
-  const status = await connection.getSignatureStatus(txSignature);
-  console.log(status);
-  // Output: {
-  //   slot: 123456789,
-  //   confirmations: 1,
-  //   err: null
-  // }
 } catch (error) {
   console.error(error);
 }
@@ -471,11 +590,12 @@ try {
 - **Outputs**: Promise resolving to program accounts data
 - **Example Usage and Output**:
 ```typescript
+// Retrieves all program accounts.
 const accounts = await namespaceWrapper.getProgramAccounts();
 console.log(accounts);
 // Output:
 {
-  "accounts": [
+  [
     {
       "pubkey": "koii...",
       "account": {
@@ -490,20 +610,31 @@ console.log(accounts);
 }
 ```
 
-#### claimReward(round: number): Promise<string | void>
+#### claimReward(stakePotAccount: PublicKey, beneficiaryAccount: PublicKey, claimerKeypair: Keypair): Promise<string | void>
 - **Description**: Claims rewards for a specific round
 - **Inputs**:
-  - round: Round number for which to claim rewards
+  - stakePotAccount: PublicKey    // The stake pot account
+  - beneficiaryAccount: PublicKey // Account to receive rewards
+  - claimerKeypair: Keypair       // Keypair of the claimer
 - **Outputs**: Promise resolving to transaction signature
 - **Example Usage and Output**:
 ```typescript
 // Successful claim
 try {
-  const txSignature = await namespaceWrapper.claimReward(5);
-  console.log(txSignature);
-  // Output: "2ZxVnRvqUptpP5FfgbiFh6q5zNkTJqh8sM8JKvtqJF3G..."
+  const stakePotAccount = new PublicKey('YourStakePotAccountPublicKeyHere');
+  const beneficiaryAccount = new PublicKey('YourBeneficiaryAccountPublicKeyHere');
+  const claimerKeypair = Keypair.fromSecretKey(new Uint8Array([...yourSecretKeyArray]));
 
-  // Verify claim
+  const txSignature = await namespaceWrapper.claimReward(stakePotAccount, beneficiaryAccount, claimerKeypair);
+  console.log(txSignature);
+  // Output:
+  //   - string ("2ZxVnRvqUptpP5FfgbiFh6q5zNkTJqh8sM8JKvtqJF3G...") // Transaction signature
+} catch (error) {
+  console.error(error);
+}
+
+// Verify claim
+try {
   const rewardStatus = await namespaceWrapper.getTaskState({
     is_available_balances_required: true
   });
@@ -513,14 +644,37 @@ try {
 }
 ```
 
-#### stakeOnChain(amount: number): Promise<string | void>
-- **Description**: Stakes KOII tokens for task participation
+#### stakeOnChain(taskStateInfoPublicKey: PublicKey, stakingAccKeypair: Keypair, stakePotAccount: PublicKey, stakeAmount: number): Promise<void | string>
+- **Description**: Stakes tokens for a task.
 - **Inputs**:
-  - amount: Amount of KOII to stake
+  - taskStateInfoPublicKey: PublicKey
+  - stakingAccKeypair: Keypair
+  - stakePotAccount: PublicKey
+  - stakeAmount: number (in KOII)
 - **Outputs**: Promise resolving to transaction signature
 - **Example Usage**:
 ```typescript
-const txSignature = await namespaceWrapper.stakeOnChain(1000);
+import { PublicKey, Keypair } from '@_koii/web3.js';
+
+try {
+  // Replace these with actual values
+  const taskStateInfoPublicKey = new PublicKey("YourTaskStateInfoPublicKeyHere"); // The public key associated with the task
+  const stakingAccKeypair = Keypair.generate(); // Replace with the actual staking account keypair
+  const stakePotAccount = new PublicKey("YourStakePotAccountPublicKeyHere"); // The stake pot account public key
+  const stakeAmount = 100; // Example stake amount in KOII (replace with your desired amount)
+
+  // Call the function
+  const transactionSignature = await stakeOnChain(
+    taskStateInfoPublicKey,
+    stakingAccKeypair,
+    stakePotAccount,
+    stakeAmount
+  );
+
+  console.log("Stake Successful! Transaction Signature:", transactionSignature);
+} catch (error) {
+  console.error("Error staking on-chain:", error);
+}
 ```
 
 ### Path and Location Operations
@@ -531,6 +685,8 @@ const txSignature = await namespaceWrapper.stakeOnChain(1000);
 - **Example Usage**:
 ```typescript
 const dbPath = await namespaceWrapper.getTaskLevelDBPath();
+// Output:
+  //   - string ("your_local_path/namespace/TASK_ID/KOIIDB") // DB path
 ```
 
 #### getBasePath(): Promise<string>
@@ -539,6 +695,8 @@ const dbPath = await namespaceWrapper.getTaskLevelDBPath();
 - **Example Usage**:
 ```typescript
 const basePath = await namespaceWrapper.getBasePath();
+// Output:
+  //   - string ("your_local_path/namespace/TASK_ID/")
 ```
 
 ### Round Management
@@ -549,72 +707,32 @@ const basePath = await namespaceWrapper.getBasePath();
 - **Example Usage**:
 ```typescript
 const currentRound = await namespaceWrapper.getRound();
+// Output:
+//   - number (1 or current number of that specific round)
 ```
 
 ### Task Information
 
-#### getTaskSubmissionInfo(): Promise<TaskSubmissionState>
+#### getTaskSubmissionInfo(round: number): Promise<TaskSubmissionState | null>
 - **Description**: Retrieves submission information for the task
+- **Inputs**: round: number (current round number)
 - **Outputs**: Promise resolving to submission state
 - **Example Usage and Output**:
 ```typescript
 // Successful retrieval with multiple submissions
-const submissionInfo = await namespaceWrapper.getTaskSubmissionInfo();
+const submissionInfo = await namespaceWrapper.getTaskSubmissionInfo(1);
 console.log(JSON.stringify(submissionInfo, null, 2));
+
 // Output:
 {
-  "submissions": {
-    "round_1": {
-      "node1": {
-        "submission_value": "QmX7bGd8XuE8f9J7VbcNZsxeJKz3biMhPqLcTwXQjZkJ9K",
-        "slot": 12345,
-        "round": 1,
-        "timestamp": 1678234567890
-      },
-      "node2": {
-        "submission_value": "QmY9kL5zH2wF6J7MpR8VbcMZsxeJKz3biMhPqLcTwXQjZkL",
-        "slot": 12346,
-        "round": 1,
-        "timestamp": 1678234567891
-      }
-    },
-    "round_2": {
-      "node1": {
-        "submission_value": "QmZ1kL5zH2wF6J7MpR8VbcMZsxeJKz3biMhPqLcTwXQjZkM",
-        "slot": 12347,
-        "round": 2,
-        "timestamp": 1678234567892
-      }
-    }
-  },
-  "submissions_audit_trigger": {
-    "round_1": {
-      "node1": {
-        "trigger_by": "koii1234...",
-        "slot": 12345,
-        "votes": [
-          {
-            "is_valid": true,
-            "voter": "koii5678...",
-            "slot": 12346,
-            "reason": "valid_hash_match"
-          },
-          {
-            "is_valid": true,
-            "voter": "koii9012...",
-            "slot": 12346,
-            "reason": "valid_content_verification"
-          }
-        ]
-      }
-    }
-  }
+  submissions: SubmissionsPerRound
+  submissions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
 }
 
 // Error case (no submissions yet)
-const emptySubmissionInfo = await namespaceWrapper.getTaskSubmissionInfo();
+const emptySubmissionInfo = await namespaceWrapper.getTaskSubmissionInfo(10);
 console.log(emptySubmissionInfo);
-// Output:
+// Output: or throw error because not found
 {
   "submissions": {},
   "submissions_audit_trigger": {}
@@ -622,26 +740,32 @@ console.log(emptySubmissionInfo);
 
 // Error case (network error)
 try {
-  const info = await namespaceWrapper.getTaskSubmissionInfo();
+  const info = await namespaceWrapper.getTaskSubmissionInfo(3);
 } catch (error) {
   console.error(error);
 }
 ```
 
-#### getSubmitterAccount(): Promise<PublicKey>
+#### getSubmitterAccount(): Promise<Keypair | null>
 - **Description**: Gets the submitter's account public key
 - **Outputs**: Promise resolving to submitter's public key
 - **Example Usage**:
 ```typescript
 const submitterKey = await namespaceWrapper.getSubmitterAccount();
+
+// Output:
+  - Keypair { secretKey: Uint8Array(64) [/* secret key bytes */], publicKey: PublicKey { /* public key */ } }
 ```
 
-#### getMainAccountPubkey(): Promise<string>
+#### getMainAccountPubkey(): Promise<string | null>
 - **Description**: Gets the main account's public key
 - **Outputs**: Promise resolving to main account public key
 - **Example Usage**:
 ```typescript
 const mainPubkey = await namespaceWrapper.getMainAccountPubkey();
+
+// Output:
+  - "5Hh7i4K6Qhb9P3hLk9mnEJzLbxnsXjdJ6sWxYbR4tT5z" | null 
 ```
 
 #### getTaskNodeVersion(): Promise<string>
@@ -650,172 +774,154 @@ const mainPubkey = await namespaceWrapper.getMainAccountPubkey();
 - **Example Usage**:
 ```typescript
 const version = await namespaceWrapper.getTaskNodeVersion();
+
+// Output:
+  - "1.11.19"
 ```
 
 ### Audit and Distribution Operations
 
-#### auditSubmission(submissionValue: string, round: number): Promise<boolean>
+#### auditSubmission(candidatePubkey: PublicKey, isValid: boolean, voterKeypair: Keypair, round: number): Promise<void>
 - **Description**: Audits a submission for a specific round
 - **Inputs**:
-  - submissionValue: Value to audit
-  - round: Round number
+  - candidatePubkey: PublicKey
+  - isValid: boolean
+  - voterKeypair: Keypair
+  - round: number
 - **Outputs**: Promise resolving to audit result
 - **Example Usage and Output**:
 ```typescript
-const isValid = await namespaceWrapper.auditSubmission("value", currentRound);
-console.log(isValid);
-// Output: true
+const candidatePubkey = new PublicKey('...'); // The public key of the candidate being audited
+const isValid = true;                         // Whether the submission is valid
+const voterKeypair = Keypair.generate();      // A Keypair for the voter (can be a new or existing one)
+const round = 1;                              // Current round of auditing
+
+await auditSubmission(candidatePubkey, isValid, voterKeypair, round);
 ```
 
-#### distributionListSubmissionOnChain(round: number): Promise<void>
+#### distributionListSubmissionOnChain(round: number): Promise<void | string>
 - **Description**: Submits distribution list to the blockchain
 - **Inputs**:
   - round: Round number
 - **Example Usage**:
 ```typescript
-await namespaceWrapper.distributionListSubmissionOnChain(currentRound);
+try{
+  const round = 1; // Current round of distribution submission
+  const result = await distributionListSubmissionOnChain(round);
+  console.log(result);
+  // Output:
+    - "5eZGF6A3g7K5kp59h6fJH7fHGePsy9H8kE1JYjxjixHvbfYqmn3URznUnhbcqpmRWRbbY4o8D9Ak2vhwKjfBbgC2" // (transaction signature (a string))
+}
+catch (error){
+  console.log(error)
+}
 ```
 
-#### uploadDistributionList(distributionList: any, round: number): Promise<void>
+#### uploadDistributionList(distributionList: Record<string, any>, round: number ): Promise<boolean | null> 
 - **Description**: Uploads a distribution list for a round
 - **Inputs**:
-  - distributionList: Distribution data
-  - round: Round number
+    - distributionList: Object containing distribution data
+    - round: number (the round number)
 - **Example Usage and Output**:
 ```typescript
-// Successful upload
-const distributions = {
-  nodes: {
-    "node1": {
-      amount: 100,
-      stake: 1000,
-      performance: 0.95,
-      tasks_completed: 10
-    },
-    "node2": {
-      amount: 150,
-      stake: 1500,
-      performance: 0.98,
-      tasks_completed: 15
-    }
-  },
-  metadata: {
-    total_distribution: 250,
-    round_metrics: {
-      average_performance: 0.965,
-      total_tasks: 25
-    }
-  }
-};
-
+// Uploads a distribution list for a specific round.
 try {
-  await namespaceWrapper.uploadDistributionList(distributions, 10);
-  
-  // Verify upload
-  const uploaded = await namespaceWrapper.getDistributionList(10);
-  console.log(uploaded);
-  // Output: {
-  //   [Previous distribution list content]
-  //   status: "UPLOADED",
-  //   timestamp: 1678234567890,
-  //   signature: "dist_sig_123..."
-  // }
+  const distributionList = {
+    "candidate1": { value: 100 },
+    "candidate2": { value: 200 },
+  };
+  const round = 1;
+
+  const result = await uploadDistributionList(distributionList, round);
+  console.log(result); // Output: true (if everything works as expected)
 } catch (error) {
   console.error(error)
 }
 ```
 
-#### getTaskDistributionInfo(): Promise<TaskDistributionInfo>
+#### getTaskDistributionInfo(round: number): Promise<TaskDistributionInfo | null> 
 - **Description**: Gets distribution information for the task
+- **Input**: round number (current round number)
 - **Outputs**: Promise resolving to distribution info
 - **Example Usage**:
 ```typescript
-const distributionInfo = await namespaceWrapper.getTaskDistributionInfo();
+try{
+  const round = 1;  // current the round number
+  const distributionInfo = await getTaskDistributionInfo(round);
+  console.log('Distribution Info:', distributionInfo);
+  // Expected output:
+  // Distribution Info: {
+  //   distribution_rewards_submission: { round1: { candidate1: 100, candidate2: 150 } },
+  //   distributions_audit_trigger: { round1: { candidate1: { triggered_by: 'admin', votes: [1, 0] } } },
+  //   distributions_audit_record: { candidate1: 'PayoutSuccessful' }
+  // }
+}
+catch (error) {
+  console.log(error)
+}
 ```
 
-#### distributionListAuditSubmission(submissionValue: string, round: number): Promise<boolean>
+#### distributionListAuditSubmission(candidatePubkey: PublicKey, isValid: boolean, voterKeypair: Keypair, round: number): Promise<void>
 - **Description**: Audits a distribution list submission
 - **Inputs**:
-  - submissionValue: Value to audit
-  - round: Round number
+  - candidatePubkey: PublicKey (the candidate's public key)
+  - isValid: boolean (whether the distribution is valid)
+  - voterKeypair: Keypair
+  - round: number (the round number)
 - **Outputs**: Promise resolving to audit result
 - **Example Usage and Output**:
 ```typescript
 // Successful audit
 try {
-  const isValid = await namespaceWrapper.distributionListAuditSubmission(
-    "QmX7bGd8XuE8f9J7VbcNZsxeJKz3biMhPqLcTwXQjZkJ9K",
-    10
-  );
-  console.log(isValid);
-  // Output: true
+  const candidatePubkey = new PublicKey('candidate-public-key');
+  const isValid = true;  // The vote is in favor of the candidate
+  const voterKeypair = Keypair.generate();  // Generate a random voter keypair
+  const round = 1;  // Round number
 
-  // Get audit details
-  const auditInfo = await namespaceWrapper.getTaskDistributionInfo();
-  console.log(auditInfo.distributions_audit_trigger["round_10"]);
-  // Output: {
-  //   "node1": {
-  //     trigger_by: "koii123...",
-  //     slot: 12345,
-  //     votes: [
-  //       {
-  //         is_valid: true,
-  //         voter: "koii456...",
-  //         slot: 12346,
-  //         audit_data: {
-  //           checked_items: 25,
-  //           validation_errors: 0,
-  //           performance_score: 1.0
-  //         }
-  //       }
-  //     ]
-  //   }
-  // }
+  await distributionListAuditSubmission(candidatePubkey, isValid, voterKeypair, round);
 } catch (error) {
   console.error(error);
 }
 ```
 
-#### validateAndVoteOnDistributionList(validate: Function, round: number): Promise<void>
+#### validateAndVoteOnDistributionList(validateDistribution: (submissionValue: string, round: number, nodePublicKey: string) => Promise<boolean>, round: number): Promise<void | string>
 - **Description**: Validates and votes on distribution lists
 - **Inputs**:
-  - validate: Validation function
+  - validateDistribution: Validation function
   - round: Round number
 - **Example Usage**:
 ```typescript
-await namespaceWrapper.validateAndVoteOnDistributionList(
-  async (submission) => true,
-  currentRound
-);
+try{
+  const round = 1;  // The round to validate
+  await validateAndVoteOnDistributionList(this.validateDistribution, round);
+}
+catch (error){
+  console.log(error)
+}
 ```
 
-#### getDistributionList(round: number): Promise<any>
+#### getDistributionList(publicKey: string, round: number): Promise<any | null> 
 - **Description**: Gets the distribution list for a specific round
 - **Inputs**:
+  - publicKey: string
   - round: Round number
 - **Outputs**: Promise resolving to distribution list
 - **Example Usage and Output**:
 ```typescript
-const distributions = await namespaceWrapper.getDistributionList(currentRound);
-console.log(distributions);
-// Output:
-{
-  "round": 1,
-  "distributions": {
-    "node1": {
-      "amount": 100,
-      "reason": "task_completion"
-    },
-    "node2": {
-      "amount": 50,
-      "reason": "validation"
-    }
-  },
-  "total_distribution": 150
+try{
+  const publicKey = "somePublicKey";
+  const round = 1;
+
+  // Call getDistributionList method
+  const distributionList = await myService.getDistributionList(publicKey, round);
+  console.log("Distribution List:", distributionList); // Distribution List: {"reward": 100, "user": "someUser"}
+}
+catch (error){
+  console.log(error)
 }
 ```
 
-#### nodeSelectionDistributionList(round: number, isPreviousFailed: boolean): Promise<string>
+#### nodeSelectionDistributionList(round: number, isPreviousFailed: boolean): Promise<string | void>
 - **Description**: Selects nodes for distribution
 - **Inputs**:
   - round: Round number
@@ -823,7 +929,18 @@ console.log(distributions);
 - **Outputs**: Promise resolving to selected node public key
 - **Example Usage**:
 ```typescript
-const selectedNode = await namespaceWrapper.nodeSelectionDistributionList(round, false);
+try{
+  // Example values for the round and isPreviousFailed flag
+  const round = 5;
+  const isPreviousFailed = false;  // Adjust based on the scenario
+
+  // Calling the nodeSelectionDistributionList function
+  const selectedNodePubkey = await myService.nodeSelectionDistributionList(round, isPreviousFailed);
+  console.log("Selected Node Public Key:", selectedNodePubkey);
+}
+catch (error){
+  console.log(error)
+}
 ```
 
 #### getAverageSlotTime(): Promise<number>
@@ -831,9 +948,13 @@ const selectedNode = await namespaceWrapper.nodeSelectionDistributionList(round,
 - **Outputs**: Promise resolving to slot time in milliseconds
 - **Example Usage and Output**:
 ```typescript
-const slotTime = await namespaceWrapper.getAverageSlotTime();
-console.log(slotTime);
-// Output: 400 // milliseconds
+try{
+  const averageSlotTime = await myService.getAverageSlotTime();
+  console.log(averageSlotTime);  // Expected output: 150
+}
+catch (error){
+  console.log(error)
+}
 ```
 
 #### payoutTrigger(round: number): Promise<void>
@@ -842,16 +963,84 @@ console.log(slotTime);
   - round: Round number
 - **Example Usage**:
 ```typescript
-await namespaceWrapper.payoutTrigger(currentRound);
+try{
+  await namespaceWrapper.payoutTrigger(currentRound);
+}
+catch (error){
+  console.log(error)
+}
 ```
 
-#### selectAndGenerateDistributionList(round: number): Promise<void>
+#### selectAndGenerateDistributionList(submitDistributionList: (round: number) => Promise<void>, round: number, isPreviousRoundFailed: boolean): Promise<void>
 - **Description**: Generates and selects distribution list
 - **Inputs**:
   - round: Round number
 - **Example Usage**:
 ```typescript
-await namespaceWrapper.selectAndGenerateDistributionList(currentRound);
+try{
+  const round = 4; // current round
+  const isPreviousRoundFailed = true // boolean value only
+
+  await namespaceWrapper.selectAndGenerateDistributionList(
+    this.submitDistributionList,
+    round,
+    isPreviousRoundFailed,
+  );
+}
+catch (error){
+  console.log(error)
+}
+```
+
+#### logger(level: LogLevel, message: string, action: string): Promise<boolean>
+- **Description**: Logs messages based on specified log level (log, warn, error).
+- **Inputs**:
+  - level: log, warn or error
+  - message: a string value
+  - action: a string value
+- **Output**: A boolean value
+- **Example Usage**:
+```typescript
+try{
+  // Log a normal message (log level)
+  const logSuccess = await namespaceWrapper.logger('log', 'Task has been successfully completed!', 'TaskCompletion');
+  console.log('Log success:', logSuccess);  // Expected output: true
+
+  // Log a warning message (warn level)
+  const warnSuccess = await namespaceWrapper.logger('warn', 'Task took longer than expected!', 'TaskWarning');
+  console.log('Warn success:', warnSuccess);  // Expected output: true
+
+  // Log an error message (error level)
+  const errorSuccess = await namespaceWrapper.logger('error', 'Task failed due to an unknown error!', 'TaskError');
+  console.log('Error success:', errorSuccess);  // Expected output: true
+
+  // Log with an invalid log level
+  const invalidLogSuccess = await namespaceWrapper.logger('invalid', 'This should fail', 'TaskFailure');
+  console.log('Invalid log success:', invalidLogSuccess);  // Expected output: false
+}
+catch (error){
+  console.log(error)
+}
+```
+
+#### getSlot(): Promise<number>
+- **Description**: get the current slot number
+- **Output**: returns a number
+- **Example Usage**:
+```typescript
+try{
+  const slot = await getSlot(); 
+  console.log(slot);  // Output: 500
+
+  const slot = await getSlot();
+  console.log(slot);  // Output: 0, and logs "Error getting slot: {}"
+
+  const slot = await getSlot();
+  console.log(slot);  // Output: 100
+}
+catch (error){
+  console.log(error)
+}
 ```
 
 ## Type Definitions
@@ -895,165 +1084,6 @@ interface TaskDistributionInfo {
   distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>;
   distributions_audit_record: Record<string, 'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'>;
 }
-```
-
-## Examples
-
-### Basic Task Setup
-
-```typescript
-// task.ts
-import { namespaceWrapper } from '@_koii/namespace-wrapper';
-
-async function initializeTask() {
-  // Initialize database
-  await namespaceWrapper.initializeDB();
-  
-  // Set initial task state
-  await namespaceWrapper.storeSet('taskConfig', JSON.stringify({
-    roundDuration: 3600,
-    minStake: 1000
-  }));
-  
-  // Start task execution
-  await executeTask();
-}
-
-async function executeTask() {
-  // Get current round
-  const round = await namespaceWrapper.getRound();
-  
-  // Perform task work
-  const result = await performWork();
-  
-  // Submit result
-  await submitTaskResult(result, round);
-}
-```
-
-### Distribution List Management
-
-```typescript
-// distribution.ts
-import { namespaceWrapper } from '@_koii/namespace-wrapper';
-
-async function handleDistribution(round: number) {
-  try {
-    // Generate distribution list
-    const distributions = await generateDistributions(round);
-    
-    // Upload distribution list
-    await namespaceWrapper.uploadDistributionList(distributions, round);
-    
-    // Submit to chain
-    await namespaceWrapper.distributionListSubmissionOnChain(round);
-    
-    // Trigger payout
-    await namespaceWrapper.payoutTrigger(round);
-  } catch (error) {
-    await namespaceWrapper.logger(
-      'error',
-      `Distribution failed: ${error.message}`,
-      'DISTRIBUTION'
-    );
-  }
-}
-```
-
-### Audit Submission Flow
-
-```typescript
-// audit.ts
-import { namespaceWrapper } from '@_koii/namespace-wrapper';
-
-async function auditSubmissions(round: number) {
-  // Get submissions
-  const submissionInfo = await namespaceWrapper.getTaskSubmissionInfo();
-  
-  // Validate submissions
-  await namespaceWrapper.validateAndVoteOnNodes(
-    async (submission, round, nodePublicKey) => {
-      // Implement validation logic
-      const isValid = await validateSubmission(submission);
-      return isValid;
-    },
-    round
-  );
-}
-
-async function auditDistributions(round: number) {
-  await namespaceWrapper.validateAndVoteOnDistributionList(
-    async (distributionList) => {
-      // Implement distribution validation logic
-      const isValid = await validateDistribution(distributionList);
-      return isValid;
-    },
-    round
-  );
-}
-```
-
-### Transaction Handling
-
-```typescript
-// transactions.ts
-import { namespaceWrapper } from '@_koii/namespace-wrapper';
-import { Transaction, PublicKey } from '@_koii/web3.js';
-
-async function handleRewards(round: number) {
-  try {
-    // Claim rewards
-    const txSignature = await namespaceWrapper.claimReward(round);
-    
-    // Verify transaction
-    if (txSignature) {
-      await namespaceWrapper.logger(
-        'log',
-        `Rewards claimed: ${txSignature}`,
-        'CLAIM_REWARD'
-      );
-    }
-  } catch (error) {
-    await namespaceWrapper.logger(
-      'error',
-      `Failed to claim rewards: ${error.message}`,
-      'CLAIM_REWARD'
-    );
-  }
-}
-```
-
-### Error Handling Patterns
-
-```typescript
-// error-handling.ts
-import { namespaceWrapper } from '@_koii/namespace-wrapper';
-
-async function safeExecute<T>(
-  operation: () => Promise<T>,
-  context: string
-): Promise<T | null> {
-  try {
-    return await operation();
-  } catch (error) {
-    await namespaceWrapper.logger(
-      'error',
-      `Operation failed in ${context}: ${error.message}`,
-      'ERROR'
-    );
-    return null;
-  }
-}
-
-// Usage example
-const result = await safeExecute(
-  async () => {
-    const round = await namespaceWrapper.getRound();
-    const submissions = await namespaceWrapper.getTaskSubmissionInfo();
-    return { round, submissions };
-  },
-  'SUBMISSION_CHECK'
-);
 ```
 
 ## Support
