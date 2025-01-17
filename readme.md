@@ -1204,7 +1204,7 @@ interface TaskDistributionInfo {
 
 For support, please contact Koii Network through:
 
-- [Discord Community](https://discord.gg/koii)
+- [Discord Community](https://discord.com/invite/koii-network)
 - [Documentation](https://docs.koii.network)
 
 ## License
