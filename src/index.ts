@@ -505,6 +505,10 @@ class NamespaceWrapper implements TaskNode {
   }
 
   async getTaskLevelDBPath(): Promise<string> {
+    return this.getTaskDBPath()
+  }
+
+  async getTaskDBPath(): Promise<string> {
     if (taskNodeAdministered) {
       return await genericHandler('getTaskLevelDBPath')
     } else {
