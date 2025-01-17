@@ -11,6 +11,8 @@ The Namespace Wrapper is a core utility package that serves as the bridge betwee
 
 This wrapper ensures that task developers can focus on their core task logic while the wrapper handles the intricacies of node operations, state management, and network interactions in a secure and standardized way.
 
+For further information on the namespace wrapper, please see the [Koii docs](https://www.koii.network/docs/develop/write-a-koii-task/namespace-wrapper/the-namespace-object).
+
 ## Installation
 
 ```bash
