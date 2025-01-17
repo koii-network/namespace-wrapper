@@ -57,7 +57,7 @@ const { namespaceWrapper } = require("@_koii/namespace-wrapper");
 ### Core Functions
 
 #### getDb(): Promise<void>
-- **Description**: get the KOIIDB
+- **Description**: get the KOIIDB [reference](https://www.npmjs.com/package/nedb-promises)
 - **Example Usage and Output**:
 ```typescript
 try {
@@ -98,15 +98,6 @@ try {
   // Get all data from the database
   const allData = await db.getAllData();
   console.log("All data in the database:", allData);
-
-  // Compact the data file
-  const compactDataResult = await db.persistenceCompactData();
-  console.log("Compact data result:", compactDataResult);
-
-  // Persist data to disk
-  const persistResult = await db.persistencePersist();
-  console.log("Persist result:", persistResult);
-
 } catch (error) {
   console.error("An error occurred:", error);
 }
@@ -185,7 +176,7 @@ try {
 #### fs(method: string, path: string, ...args: any[]): Promise<any>
 - **Description**: Executes file system operations in a standardized way
 - **Inputs**:
-  - method: File system method to execute [check methods here](https://docs.deno.com/api/node/fs/promises/)
+  - method: File system method to execute. Available options come from [FS promises](https://docs.deno.com/api/node/fs/promises/) methods.
   - path: File path
   - args: Additional arguments for the method
 - **Outputs**: Promise resolving to the operation result
@@ -202,7 +193,7 @@ console.log(data);
 ```
 
 #### fsStaking(method: string, path: string, ...args: any[]): Promise<any>
-- **Description**: Executes file system operations in the staking context
+- **Description**: A decentralized staking platform enabling secure token locking for rewards.
 - **Inputs**:
   - method: File system method to execute
   - path: File path
@@ -544,7 +535,7 @@ console.log(nodes);
 const rpcUrl = await namespaceWrapper.getRpcUrl();
 console.log(rpcUrl);
 
-// Output: "https://testnet.koii.network" or any other specific url
+// Output: "https://mainnet.koii.network"
 ```
 
 ### Transaction Operations
@@ -657,7 +648,6 @@ try {
 import { PublicKey, Keypair } from '@_koii/web3.js';
 
 try {
-  // Replace these with actual values
   const taskStateInfoPublicKey = new PublicKey("YourTaskStateInfoPublicKeyHere"); // The public key associated with the task
   const stakingAccKeypair = Keypair.generate(); // Replace with the actual staking account keypair
   const stakePotAccount = new PublicKey("YourStakePotAccountPublicKeyHere"); // The stake pot account public key
@@ -690,7 +680,7 @@ const dbPath = await namespaceWrapper.getTaskLevelDBPath();
 ```
 
 #### getBasePath(): Promise<string>
-- **Description**: Gets the base path for task operations
+- **Description**: Gets the base path to the task folder for performing file operations
 - **Outputs**: Promise resolving to base path
 - **Example Usage**:
 ```typescript
@@ -747,8 +737,8 @@ try {
 ```
 
 #### getSubmitterAccount(): Promise<Keypair | null>
-- **Description**: Gets the submitter's account public key
-- **Outputs**: Promise resolving to submitter's public key
+- **Description**: Gets the submitter's account Keypair
+- **Outputs**: Promise resolving to submitter's Keypair
 - **Example Usage**:
 ```typescript
 const submitterKey = await namespaceWrapper.getSubmitterAccount();
