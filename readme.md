@@ -51,8 +51,8 @@ const { namespaceWrapper } = require('@_koii/namespace-wrapper')
 | TASK_ID             | "task_12345..."                | Unique identifier for the task   |
 | EXPRESS_PORT        | 3000                           | Port for the Express server      |
 | MAIN_ACCOUNT_PUBKEY | "pubkey123..."                 | Main account public key          |
-| K2_NODE_URL         | "https://testnet.koii.network" | Koii network node URL            |
-| SERVICE_URL         | "http://localhost:8080"        | Service endpoint URL             |
+| K2_NODE_URL         | "https://mainnet.koii.network" | Koii network node URL            |
+| SERVICE_URL         | "http://localhost:3001"        | Service endpoint URL             |
 | STAKE               | 1000                           | Stake amount in KOII             |
 | TASK_NODE_PORT      | 8000                           | Port for task node communication |
 | STAKING_WALLET_PATH | "./wallet.json"                | Path to staking wallet file      |
@@ -408,6 +408,7 @@ const state = await namespaceWrapper.getTaskState({
   is_stake_list_required: true,
 })
 
+console.log(state)
 // {
 //   task_id: string,                      // Unique identifier for the task
 //   task_name: string,                    // Name of the task
@@ -444,7 +445,7 @@ const state = await namespaceWrapper.getTaskState({
 // }
 ```
 
-#### validateAndVoteOnNodes(validate: Function, round: number): Promise<void | string>
+#### validateAndVoteOnNodes(validate: (submissionValue: string, round: number, nodePublicKey: string,) => Promise<boolean>, round: number): Promise<void | string>
 
 - **Description**: Validates and votes on node submissions
 - **Inputs**:
@@ -492,11 +493,11 @@ if (submission) {
 <!-- from below you can get the Task id -->
 
 ```typescript
-const { TASK_ID } from '@_koii/namespace-wrapper';
+import { namespaceWrapper, TASK_ID } from '@_koii/namespace-wrapper';
 ```
 
 ```javascript
-const { TASK_ID } = require('@_koii/namespace-wrapper')
+const { namespaceWrapper, TASK_ID } = require('@_koii/namespace-wrapper')
 ```
 
 ```typescript
@@ -546,12 +547,12 @@ const getInfo = await namespaceWrapper.getTaskStateById(TASK_ID, 'KOII', {
 
 ### Network Operations
 
-#### getNodes(url: string): Promise\<any\>
+#### getNodes(url: string)
 
 - **Description**: Retrieves information about network nodes
 - **Inputs**:
   - url: API endpoint URL
-- **Outputs**: Promise resolving to node information
+- **Outputs**: An array of objects representing the node information, directly returned by the function.
 - **Example Usage and Output**:
 
 ```typescript
@@ -629,7 +630,7 @@ try {
 }
 ```
 
-#### getProgramAccounts(): Promise\<any\>
+#### getProgramAccounts()
 
 - **Description**: Retrieves all program accounts associated with the task
 - **Outputs**: Promise resolving to program accounts data
@@ -640,20 +641,10 @@ try {
 const accounts = await namespaceWrapper.getProgramAccounts();
 console.log(accounts);
 // Output:
-{
-  [
-    {
-      "pubkey": "koii...",
-      "account": {
-        "lamports": 1000000,
-        "data": [...],
-        "owner": "koii...",
-        "executable": false
-      }
-    }
-    // ... more accounts
-  ]
-}
+Output: Array<{
+  pubkey: PublicKey,           // Account public key
+  account: AccountInfo<Buffer>  // Account information
+}>
 ```
 
 #### claimReward(stakePotAccount: PublicKey, beneficiaryAccount: PublicKey, claimerKeypair: Keypair): Promise<string | void>
@@ -744,6 +735,7 @@ try {
 
 ```typescript
 const dbPath = await namespaceWrapper.getTaskLevelDBPath()
+console.log(dbPath)
 // Output:
 //   - string ("your_local_path/namespace/TASK_ID/KOIIDB") // DB path
 ```
@@ -755,7 +747,9 @@ const dbPath = await namespaceWrapper.getTaskLevelDBPath()
 - **Example Usage**:
 
 ```typescript
-const basePath = await namespaceWrapper.getBasePath()
+const basePath = await namespaceWrapper.getBasePath();
+
+console.log(basePath);
 // Output:
 //   - string ("your_local_path/namespace/TASK_ID/")
 ```
@@ -769,7 +763,9 @@ const basePath = await namespaceWrapper.getBasePath()
 - **Example Usage**:
 
 ```typescript
-const currentRound = await namespaceWrapper.getRound()
+const currentRound = await namespaceWrapper.getRound();
+
+console.log(currentRound);
 // Output:
 //   - number (1 or current number of that specific round)
 ```
@@ -821,7 +817,7 @@ try {
 const submitterKey = await namespaceWrapper.getSubmitterAccount();
 
 // Output:
-  - Keypair { secretKey: Uint8Array(64) [/* secret key bytes */], publicKey: PublicKey { /* public key */ } }
+// - Keypair { secretKey: Uint8Array(64) [/* secret key bytes */], publicKey: PublicKey { /* public key */ } }
 ```
 
 #### getMainAccountPubkey(): Promise<string | null>
@@ -833,8 +829,7 @@ const submitterKey = await namespaceWrapper.getSubmitterAccount();
 ```typescript
 const mainPubkey = await namespaceWrapper.getMainAccountPubkey()
 
-// Output:
-;-'5Hh7i4K6Qhb9P3hLk9mnEJzLbxnsXjdJ6sWxYbR4tT5z' | null
+// Output: '5Hh7i4K6Qhb9P3hLk9mnEJzLbxnsXjdJ6sWxYbR4tT5z' | null
 ```
 
 #### getTaskNodeVersion(): Promise\<string\>
@@ -844,10 +839,9 @@ const mainPubkey = await namespaceWrapper.getMainAccountPubkey()
 - **Example Usage**:
 
 ```typescript
-const version = await namespaceWrapper.getTaskNodeVersion()
+const version = await namespaceWrapper.getTaskNodeVersion();
 
-// Output:
-;-'1.11.19'
+console.log(version); // Output: "1.11.19";
 ```
 
 ### Audit and Distribution Operations
@@ -929,9 +923,12 @@ try {
   console.log('Distribution Info:', distributionInfo)
   // Expected output:
   // Distribution Info: {
-  //   distribution_rewards_submission: { round1: { candidate1: 100, candidate2: 150 } },
-  //   distributions_audit_trigger: { round1: { candidate1: { triggered_by: 'admin', votes: [1, 0] } } },
-  //   distributions_audit_record: { candidate1: 'PayoutSuccessful' }
+  //   distribution_rewards_submission: SubmissionsPerRound
+  //   distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
+  //   distributions_audit_record: Record<
+  //     string,
+  //     'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'
+  //   >
   // }
 } catch (error) {
   console.log(error)
@@ -1135,7 +1132,7 @@ try {
 
 #### getSlot(): Promise\<number\>
 
-- **Description**: get the current slot number
+- **Description**: Get the current slot number
 - **Output**: returns a number
 - **Example Usage**:
 
