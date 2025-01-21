@@ -233,7 +233,7 @@ console.log(data)
 - **Description**: Creates a write stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: WriteStream object or nothing (void)
+- **Outputs**: WriteStream object or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -277,7 +277,7 @@ try {
 - **Description**: Creates a read stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: Buffer containing file data or nothing (void)
+- **Outputs**: Buffer containing file data or void
 - **Example Usage and Output**:
 
 ```typescript
