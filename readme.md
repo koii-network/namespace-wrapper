@@ -119,7 +119,7 @@ try {
 - **Inputs**:
   - key: String identifier for the value
   - value: String value to store
-- **Outputs**: Promise resolving when storage is complete
+- **Outputs**: Completion of storage operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -159,7 +159,7 @@ try {
 - **Description**: Retrieves a value from the persistent storage
 - **Inputs**:
   - key: String identifier for the stored value
-- **Outputs**: Promise resolving to the stored value or null
+- **Outputs**: Stored value or null
 - **Example Usage and Output**:
 
 ```typescript
@@ -194,7 +194,7 @@ try {
   - method: File system method to execute. Available options come from [FS promises](https://docs.deno.com/api/node/fs/promises/) methods.
   - path: File path
   - args: Additional arguments for the method
-- **Outputs**: Promise resolving to the operation result
+- **Outputs**: Result of file system operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -215,7 +215,7 @@ console.log(data)
   - method: File system method to execute
   - path: File path
   - args: Additional arguments for the method
-- **Outputs**: Promise resolving to the operation result
+- **Outputs**: Result of staking-related file operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -233,7 +233,7 @@ console.log(data)
 - **Description**: Creates a write stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: Promise resolving to a WriteStream object
+- **Outputs**: WriteStream object or nothing (void)
 - **Example Usage and Output**:
 
 ```typescript
@@ -277,7 +277,7 @@ try {
 - **Description**: Creates a read stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: Promise resolving to a Buffer
+- **Outputs**: Buffer containing file data or nothing (void)
 - **Example Usage and Output**:
 
 ```typescript
@@ -313,7 +313,7 @@ try {
 - **Description**: Signs a payload for blockchain transactions using the main wallet's public key.
 - **Inputs**:
   - body: Object containing the payload data
-- **Outputs**: Promise resolving to the signed message
+- **Outputs**: Signed message
 - **Example Usage and Output**:
 
 ```typescript
@@ -349,7 +349,7 @@ try {
 - **Inputs**:
   - signedMessage: The signed message to verify
   - pubKey: Public key for verification
-- **Outputs**: Promise resolving to verification result
+- **Outputs**: Verification result (with `data` or `error`)
 - **Example Usage and Output**:
 
 ```typescript
@@ -396,7 +396,7 @@ console.log(mismatchResult)
     is_available_balances_required?: boolean, // Whether to include balance data
     is_stake_list_required?: boolean // Whether to include stake list
     }
-- **Outputs**: Promise resolving to task state object
+- **Outputs**: Task state object or `null`
 - **Example Usage**:
 
 ```typescript
@@ -451,7 +451,7 @@ console.log(state)
 - **Inputs**:
   - validate: Validation function
   - round: Current round number
-- **Outputs**: Promise resolving to validation result
+- **Outputs**: Void if no issue, otherwise a string indicating validation status
 - **Example Usage**:
 
 ```typescript
@@ -466,7 +466,7 @@ await namespaceWrapper.validateAndVoteOnNodes(
 
 - **Description**: Verifies submissions and updates the current round
 - **Input**: Add the submission and the roundNumber
-- **Outputs**: Promise resolving when complete
+- **Outputs**: Void once complete
 - **Example Usage**:
 
 ```typescript
@@ -488,7 +488,7 @@ if (submission) {
     is_available_balances_required?: boolean, // Whether to include balance data
     is_stake_list_required?: boolean // Whether to include stake list
     }
-- **Outputs**: Promise resolving to task state
+- **Outputs**: Task state object or `null`
 - **Example Usage**:
 <!-- from below you can get the Task id -->
 
@@ -552,7 +552,7 @@ const getInfo = await namespaceWrapper.getTaskStateById(TASK_ID, 'KOII', {
 - **Description**: Retrieves information about network nodes
 - **Inputs**:
   - url: API endpoint URL
-- **Outputs**: An array of objects representing the node information, directly returned by the function.
+- **Outputs**: Array of node information objects
 - **Example Usage and Output**:
 
 ```typescript
@@ -576,7 +576,7 @@ console.log(nodes)
 #### getRpcUrl(): Promise<string | void>
 
 - **Description**: Gets the current RPC URL for the Koii network
-- **Outputs**: Promise resolving to the RPC URL
+- **Outputs**: String containing the RPC URL or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -594,7 +594,7 @@ console.log(rpcUrl)
 - **Inputs**:
   - transaction: Transaction object
   - signers: Array of signing keypairs
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -612,7 +612,7 @@ console.log(result)
   - serviceNodeAccount: Service node's public key
   - beneficiaryAccount: Recipient's public key
   - amount: Transaction amount (in lamports)
-- **Outputs**: Promise resolving to transaction result
+- **Outputs**: Transaction result string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -630,10 +630,10 @@ try {
 }
 ```
 
-#### getProgramAccounts()
+#### getProgramAccounts() : Promise\<any\>
 
 - **Description**: Retrieves all program accounts associated with the task
-- **Outputs**: Promise resolving to program accounts data
+- **Outputs**: Array of program accounts
 - **Example Usage and Output**:
 
 ```typescript
@@ -654,7 +654,7 @@ Output: Array<{
   - stakePotAccount: PublicKey // The stake pot account
   - beneficiaryAccount: PublicKey // Account to receive rewards
   - claimerKeypair: Keypair // Keypair of the claimer
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -699,7 +699,7 @@ try {
   - stakingAccKeypair: Keypair
   - stakePotAccount: PublicKey
   - stakeAmount: number (in KOII)
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage**:
 
 ```typescript
@@ -730,11 +730,11 @@ try {
 #### getTaskDBPath(): Promise\<string\>
 
 - **Description**: Gets the path to the task's NeDB database
-- **Outputs**: Promise resolving to database path
+- **Outputs**: String containing the database path
 - **Example Usage**:
 
 ```typescript
-const dbPath = await namespaceWrapper.getTaskLevelDBPath()
+const dbPath = await namespaceWrapper.getTaskDBPath()
 console.log(dbPath)
 // Output:
 //   - string ("your_local_path/namespace/TASK_ID/KOIIDB") // DB path
@@ -743,7 +743,7 @@ console.log(dbPath)
 #### getBasePath(): Promise\<string\>
 
 - **Description**: Gets the base path to the task folder for performing file operations
-- **Outputs**: Promise resolving to base path
+- **Outputs**: String containing the base path
 - **Example Usage**:
 
 ```typescript
@@ -759,7 +759,7 @@ console.log(basePath);
 #### getRound(): Promise\<number\>
 
 - **Description**: Gets the current round number
-- **Outputs**: Promise resolving to current round number
+- **Outputs**: Current round number
 - **Example Usage**:
 
 ```typescript
@@ -776,7 +776,7 @@ console.log(currentRound);
 
 - **Description**: Retrieves submission information for the task
 - **Inputs**: round: number (current round number)
-- **Outputs**: Promise resolving to submission state
+- **Outputs**: Submission state
 - **Example Usage and Output**:
 
 ```typescript
@@ -810,7 +810,7 @@ try {
 #### getSubmitterAccount(): Promise<Keypair | null>
 
 - **Description**: Gets the submitter's account Keypair
-- **Outputs**: Promise resolving to submitter's Keypair
+- **Outputs**: Submitter's Keypair
 - **Example Usage**:
 
 ```typescript
@@ -823,7 +823,7 @@ const submitterKey = await namespaceWrapper.getSubmitterAccount();
 #### getMainAccountPubkey(): Promise<string | null>
 
 - **Description**: Gets the main account's public key
-- **Outputs**: Promise resolving to main account public key
+- **Outputs**: Main account public key
 - **Example Usage**:
 
 ```typescript
@@ -835,7 +835,7 @@ const mainPubkey = await namespaceWrapper.getMainAccountPubkey()
 #### getTaskNodeVersion(): Promise\<string\>
 
 - **Description**: Gets the task node version
-- **Outputs**: Promise resolving to version string
+- **Outputs**: Version string
 - **Example Usage**:
 
 ```typescript
@@ -854,7 +854,7 @@ console.log(version); // Output: "1.11.19";
   - isValid: boolean
   - voterKeypair: Keypair
   - round: number
-- **Outputs**: Promise resolving to audit result
+- **Outputs**: Audit result
 - **Example Usage and Output**:
 
 ```typescript
@@ -913,7 +913,7 @@ try {
 
 - **Description**: Gets distribution information for the task
 - **Input**: round number (current round number)
-- **Outputs**: Promise resolving to distribution info
+- **Outputs**: Distribution info
 - **Example Usage**:
 
 ```typescript
@@ -943,7 +943,7 @@ try {
   - isValid: boolean (whether the distribution is valid)
   - voterKeypair: Keypair
   - round: number (the round number)
-- **Outputs**: Promise resolving to audit result
+- **Outputs**: Audit result
 - **Example Usage and Output**:
 
 ```typescript
@@ -988,7 +988,7 @@ try {
 - **Inputs**:
   - publicKey: string
   - round: Round number
-- **Outputs**: Promise resolving to distribution list
+- **Outputs**: Distribution list
 - **Example Usage and Output**:
 
 ```typescript
@@ -1010,7 +1010,7 @@ try {
 - **Inputs**:
   - round: Round number
   - isPreviousFailed: Whether previous attempt failed
-- **Outputs**: Promise resolving to selected node public key
+- **Outputs**: Selected node public key
 - **Example Usage**:
 
 ```typescript
@@ -1033,7 +1033,7 @@ try {
 #### getAverageSlotTime(): Promise\<number\>
 
 - **Description**: Gets average slot time for the network
-- **Outputs**: Promise resolving to slot time in milliseconds
+- **Outputs**: Slot time in milliseconds
 - **Example Usage and Output**:
 
 ```typescript
@@ -1133,7 +1133,7 @@ try {
 #### getSlot(): Promise\<number\>
 
 - **Description**: Get the current slot number
-- **Output**: returns a number
+- **Output**: Returns a number
 - **Example Usage**:
 
 ```typescript
