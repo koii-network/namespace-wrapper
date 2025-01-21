@@ -51,8 +51,8 @@ const { namespaceWrapper } = require('@_koii/namespace-wrapper')
 | TASK_ID             | "task_12345..."                | Unique identifier for the task   |
 | EXPRESS_PORT        | 3000                           | Port for the Express server      |
 | MAIN_ACCOUNT_PUBKEY | "pubkey123..."                 | Main account public key          |
-| K2_NODE_URL         | "https://testnet.koii.network" | Koii network node URL            |
-| SERVICE_URL         | "http://localhost:8080"        | Service endpoint URL             |
+| K2_NODE_URL         | "https://mainnet.koii.network" | Koii network node URL            |
+| SERVICE_URL         | "http://localhost:3001"        | Service endpoint URL             |
 | STAKE               | 1000                           | Stake amount in KOII             |
 | TASK_NODE_PORT      | 8000                           | Port for task node communication |
 | STAKING_WALLET_PATH | "./wallet.json"                | Path to staking wallet file      |
@@ -119,7 +119,7 @@ try {
 - **Inputs**:
   - key: String identifier for the value
   - value: String value to store
-- **Outputs**: Promise resolving when storage is complete
+- **Outputs**: Completion of storage operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -159,7 +159,7 @@ try {
 - **Description**: Retrieves a value from the persistent storage
 - **Inputs**:
   - key: String identifier for the stored value
-- **Outputs**: Promise resolving to the stored value or null
+- **Outputs**: Stored value or null
 - **Example Usage and Output**:
 
 ```typescript
@@ -194,7 +194,7 @@ try {
   - method: File system method to execute. Available options come from [FS promises](https://docs.deno.com/api/node/fs/promises/) methods.
   - path: File path
   - args: Additional arguments for the method
-- **Outputs**: Promise resolving to the operation result
+- **Outputs**: Result of file system operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -215,7 +215,7 @@ console.log(data)
   - method: File system method to execute
   - path: File path
   - args: Additional arguments for the method
-- **Outputs**: Promise resolving to the operation result
+- **Outputs**: Result of staking-related file operation
 - **Example Usage and Output**:
 
 ```typescript
@@ -233,7 +233,7 @@ console.log(data)
 - **Description**: Creates a write stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: Promise resolving to a WriteStream object
+- **Outputs**: WriteStream object or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -277,7 +277,7 @@ try {
 - **Description**: Creates a read stream for file operations
 - **Inputs**:
   - imagepath: Path to the file
-- **Outputs**: Promise resolving to a Buffer
+- **Outputs**: Buffer containing file data or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -313,7 +313,7 @@ try {
 - **Description**: Signs a payload for blockchain transactions using the main wallet's public key.
 - **Inputs**:
   - body: Object containing the payload data
-- **Outputs**: Promise resolving to the signed message
+- **Outputs**: Signed message
 - **Example Usage and Output**:
 
 ```typescript
@@ -349,7 +349,7 @@ try {
 - **Inputs**:
   - signedMessage: The signed message to verify
   - pubKey: Public key for verification
-- **Outputs**: Promise resolving to verification result
+- **Outputs**: Verification result (with `data` or `error`)
 - **Example Usage and Output**:
 
 ```typescript
@@ -396,7 +396,7 @@ console.log(mismatchResult)
     is_available_balances_required?: boolean, // Whether to include balance data
     is_stake_list_required?: boolean // Whether to include stake list
     }
-- **Outputs**: Promise resolving to task state object
+- **Outputs**: Task state object or `null`
 - **Example Usage**:
 
 ```typescript
@@ -408,6 +408,7 @@ const state = await namespaceWrapper.getTaskState({
   is_stake_list_required: true,
 })
 
+console.log(state)
 // {
 //   task_id: string,                      // Unique identifier for the task
 //   task_name: string,                    // Name of the task
@@ -444,13 +445,13 @@ const state = await namespaceWrapper.getTaskState({
 // }
 ```
 
-#### validateAndVoteOnNodes(validate: Function, round: number): Promise<void | string>
+#### validateAndVoteOnNodes(validate: (submissionValue: string, round: number, nodePublicKey: string,) => Promise<boolean>, round: number): Promise<void | string>
 
 - **Description**: Validates and votes on node submissions
 - **Inputs**:
   - validate: Validation function
   - round: Current round number
-- **Outputs**: Promise resolving to validation result
+- **Outputs**: Void if no issue, otherwise a string indicating validation status
 - **Example Usage**:
 
 ```typescript
@@ -465,7 +466,7 @@ await namespaceWrapper.validateAndVoteOnNodes(
 
 - **Description**: Verifies submissions and updates the current round
 - **Input**: Add the submission and the roundNumber
-- **Outputs**: Promise resolving when complete
+- **Outputs**: Void once complete
 - **Example Usage**:
 
 ```typescript
@@ -487,16 +488,16 @@ if (submission) {
     is_available_balances_required?: boolean, // Whether to include balance data
     is_stake_list_required?: boolean // Whether to include stake list
     }
-- **Outputs**: Promise resolving to task state
+- **Outputs**: Task state object or `null`
 - **Example Usage**:
 <!-- from below you can get the Task id -->
 
 ```typescript
-const { TASK_ID } from '@_koii/namespace-wrapper';
+import { namespaceWrapper, TASK_ID } from '@_koii/namespace-wrapper';
 ```
 
 ```javascript
-const { TASK_ID } = require('@_koii/namespace-wrapper')
+const { namespaceWrapper, TASK_ID } = require('@_koii/namespace-wrapper')
 ```
 
 ```typescript
@@ -546,12 +547,12 @@ const getInfo = await namespaceWrapper.getTaskStateById(TASK_ID, 'KOII', {
 
 ### Network Operations
 
-#### getNodes(url: string): Promise\<any\>
+#### getNodes(url: string)
 
 - **Description**: Retrieves information about network nodes
 - **Inputs**:
   - url: API endpoint URL
-- **Outputs**: Promise resolving to node information
+- **Outputs**: Array of node information objects
 - **Example Usage and Output**:
 
 ```typescript
@@ -575,7 +576,7 @@ console.log(nodes)
 #### getRpcUrl(): Promise<string | void>
 
 - **Description**: Gets the current RPC URL for the Koii network
-- **Outputs**: Promise resolving to the RPC URL
+- **Outputs**: String containing the RPC URL or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -593,7 +594,7 @@ console.log(rpcUrl)
 - **Inputs**:
   - transaction: Transaction object
   - signers: Array of signing keypairs
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -611,7 +612,7 @@ console.log(result)
   - serviceNodeAccount: Service node's public key
   - beneficiaryAccount: Recipient's public key
   - amount: Transaction amount (in lamports)
-- **Outputs**: Promise resolving to transaction result
+- **Outputs**: Transaction result string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -629,10 +630,10 @@ try {
 }
 ```
 
-#### getProgramAccounts(): Promise\<any\>
+#### getProgramAccounts() : Promise\<any\>
 
 - **Description**: Retrieves all program accounts associated with the task
-- **Outputs**: Promise resolving to program accounts data
+- **Outputs**: Array of program accounts
 - **Example Usage and Output**:
 
 ```typescript
@@ -640,20 +641,10 @@ try {
 const accounts = await namespaceWrapper.getProgramAccounts();
 console.log(accounts);
 // Output:
-{
-  [
-    {
-      "pubkey": "koii...",
-      "account": {
-        "lamports": 1000000,
-        "data": [...],
-        "owner": "koii...",
-        "executable": false
-      }
-    }
-    // ... more accounts
-  ]
-}
+Output: Array<{
+  pubkey: PublicKey,           // Account public key
+  account: AccountInfo<Buffer>  // Account information
+}>
 ```
 
 #### claimReward(stakePotAccount: PublicKey, beneficiaryAccount: PublicKey, claimerKeypair: Keypair): Promise<string | void>
@@ -663,7 +654,7 @@ console.log(accounts);
   - stakePotAccount: PublicKey // The stake pot account
   - beneficiaryAccount: PublicKey // Account to receive rewards
   - claimerKeypair: Keypair // Keypair of the claimer
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage and Output**:
 
 ```typescript
@@ -708,7 +699,7 @@ try {
   - stakingAccKeypair: Keypair
   - stakePotAccount: PublicKey
   - stakeAmount: number (in KOII)
-- **Outputs**: Promise resolving to transaction signature
+- **Outputs**: Transaction signature string or void
 - **Example Usage**:
 
 ```typescript
@@ -739,11 +730,12 @@ try {
 #### getTaskDBPath(): Promise\<string\>
 
 - **Description**: Gets the path to the task's NeDB database
-- **Outputs**: Promise resolving to database path
+- **Outputs**: String containing the database path
 - **Example Usage**:
 
 ```typescript
-const dbPath = await namespaceWrapper.getTaskLevelDBPath()
+const dbPath = await namespaceWrapper.getTaskDBPath()
+console.log(dbPath)
 // Output:
 //   - string ("your_local_path/namespace/TASK_ID/KOIIDB") // DB path
 ```
@@ -751,11 +743,13 @@ const dbPath = await namespaceWrapper.getTaskLevelDBPath()
 #### getBasePath(): Promise\<string\>
 
 - **Description**: Gets the base path to the task folder for performing file operations
-- **Outputs**: Promise resolving to base path
+- **Outputs**: String containing the base path
 - **Example Usage**:
 
 ```typescript
-const basePath = await namespaceWrapper.getBasePath()
+const basePath = await namespaceWrapper.getBasePath();
+
+console.log(basePath);
 // Output:
 //   - string ("your_local_path/namespace/TASK_ID/")
 ```
@@ -765,11 +759,13 @@ const basePath = await namespaceWrapper.getBasePath()
 #### getRound(): Promise\<number\>
 
 - **Description**: Gets the current round number
-- **Outputs**: Promise resolving to current round number
+- **Outputs**: Current round number
 - **Example Usage**:
 
 ```typescript
-const currentRound = await namespaceWrapper.getRound()
+const currentRound = await namespaceWrapper.getRound();
+
+console.log(currentRound);
 // Output:
 //   - number (1 or current number of that specific round)
 ```
@@ -780,7 +776,7 @@ const currentRound = await namespaceWrapper.getRound()
 
 - **Description**: Retrieves submission information for the task
 - **Inputs**: round: number (current round number)
-- **Outputs**: Promise resolving to submission state
+- **Outputs**: Submission state
 - **Example Usage and Output**:
 
 ```typescript
@@ -814,40 +810,38 @@ try {
 #### getSubmitterAccount(): Promise<Keypair | null>
 
 - **Description**: Gets the submitter's account Keypair
-- **Outputs**: Promise resolving to submitter's Keypair
+- **Outputs**: Submitter's Keypair
 - **Example Usage**:
 
 ```typescript
 const submitterKey = await namespaceWrapper.getSubmitterAccount();
 
 // Output:
-  - Keypair { secretKey: Uint8Array(64) [/* secret key bytes */], publicKey: PublicKey { /* public key */ } }
+// - Keypair { secretKey: Uint8Array(64) [/* secret key bytes */], publicKey: PublicKey { /* public key */ } }
 ```
 
 #### getMainAccountPubkey(): Promise<string | null>
 
 - **Description**: Gets the main account's public key
-- **Outputs**: Promise resolving to main account public key
+- **Outputs**: Main account public key
 - **Example Usage**:
 
 ```typescript
 const mainPubkey = await namespaceWrapper.getMainAccountPubkey()
 
-// Output:
-;-'5Hh7i4K6Qhb9P3hLk9mnEJzLbxnsXjdJ6sWxYbR4tT5z' | null
+// Output: '5Hh7i4K6Qhb9P3hLk9mnEJzLbxnsXjdJ6sWxYbR4tT5z' | null
 ```
 
 #### getTaskNodeVersion(): Promise\<string\>
 
 - **Description**: Gets the task node version
-- **Outputs**: Promise resolving to version string
+- **Outputs**: Version string
 - **Example Usage**:
 
 ```typescript
-const version = await namespaceWrapper.getTaskNodeVersion()
+const version = await namespaceWrapper.getTaskNodeVersion();
 
-// Output:
-;-'1.11.19'
+console.log(version); // Output: "1.11.19";
 ```
 
 ### Audit and Distribution Operations
@@ -860,7 +854,7 @@ const version = await namespaceWrapper.getTaskNodeVersion()
   - isValid: boolean
   - voterKeypair: Keypair
   - round: number
-- **Outputs**: Promise resolving to audit result
+- **Outputs**: Audit result
 - **Example Usage and Output**:
 
 ```typescript
@@ -919,7 +913,7 @@ try {
 
 - **Description**: Gets distribution information for the task
 - **Input**: round number (current round number)
-- **Outputs**: Promise resolving to distribution info
+- **Outputs**: Distribution info
 - **Example Usage**:
 
 ```typescript
@@ -929,9 +923,12 @@ try {
   console.log('Distribution Info:', distributionInfo)
   // Expected output:
   // Distribution Info: {
-  //   distribution_rewards_submission: { round1: { candidate1: 100, candidate2: 150 } },
-  //   distributions_audit_trigger: { round1: { candidate1: { triggered_by: 'admin', votes: [1, 0] } } },
-  //   distributions_audit_record: { candidate1: 'PayoutSuccessful' }
+  //   distribution_rewards_submission: SubmissionsPerRound
+  //   distributions_audit_trigger: Record<string, Record<string, AuditTriggerState>>
+  //   distributions_audit_record: Record<
+  //     string,
+  //     'Uninitialized' | 'PayoutSuccessful' | 'PayoutFailed'
+  //   >
   // }
 } catch (error) {
   console.log(error)
@@ -946,7 +943,7 @@ try {
   - isValid: boolean (whether the distribution is valid)
   - voterKeypair: Keypair
   - round: number (the round number)
-- **Outputs**: Promise resolving to audit result
+- **Outputs**: Audit result
 - **Example Usage and Output**:
 
 ```typescript
@@ -991,7 +988,7 @@ try {
 - **Inputs**:
   - publicKey: string
   - round: Round number
-- **Outputs**: Promise resolving to distribution list
+- **Outputs**: Distribution list
 - **Example Usage and Output**:
 
 ```typescript
@@ -1013,7 +1010,7 @@ try {
 - **Inputs**:
   - round: Round number
   - isPreviousFailed: Whether previous attempt failed
-- **Outputs**: Promise resolving to selected node public key
+- **Outputs**: Selected node public key
 - **Example Usage**:
 
 ```typescript
@@ -1036,7 +1033,7 @@ try {
 #### getAverageSlotTime(): Promise\<number\>
 
 - **Description**: Gets average slot time for the network
-- **Outputs**: Promise resolving to slot time in milliseconds
+- **Outputs**: Slot time in milliseconds
 - **Example Usage and Output**:
 
 ```typescript
@@ -1135,8 +1132,8 @@ try {
 
 #### getSlot(): Promise\<number\>
 
-- **Description**: get the current slot number
-- **Output**: returns a number
+- **Description**: Get the current slot number
+- **Output**: Returns a number
 - **Example Usage**:
 
 ```typescript
