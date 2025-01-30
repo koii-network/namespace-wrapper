@@ -674,7 +674,7 @@ class NamespaceWrapper implements TaskNode {
     uploadToIPFS = false,
   ): Promise<void | string> {
     console.log('******/  IN VOTING /******')
-    useRandomSampling = useRandomSampling ?? false
+    useRandomSampling = useRandomSampling ?? true
     let taskAccountDataJSON: TaskSubmissionState | null = null
     try {
       taskAccountDataJSON = await this.getTaskSubmissionInfo(round)
