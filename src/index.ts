@@ -168,8 +168,15 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
-  async payloadSigning(body: Record<string, unknown>): Promise<string | void> {
-    if (taskNodeAdministered) {
+  async payloadSigning(
+    body: Record<string, unknown>,
+    privateKey: Uint8Array | null = null,
+  ): Promise<string | void> {
+    if (privateKey) {
+      const msg = new TextEncoder().encode(JSON.stringify(body))
+      const signedMessage = nacl.sign(msg, privateKey)
+      return await this.bs58Encode(signedMessage)
+    } else if (taskNodeAdministered) {
       return await genericHandler('signData', body)
     } else {
       const msg = new TextEncoder().encode(JSON.stringify(body))
@@ -177,6 +184,7 @@ class NamespaceWrapper implements TaskNode {
         msg,
         this.testingMainSystemAccount!.secretKey,
       )
+
       return await this.bs58Encode(signedMessage)
     }
   }
