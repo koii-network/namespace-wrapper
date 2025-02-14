@@ -605,11 +605,14 @@ class NamespaceWrapper implements TaskNode {
     }
   }
 
-  async getSubmitterAccount(taskType?: string): Promise<Keypair | null> {
+  async getSubmitterAccount(taskType?: TaskType): Promise<Keypair | null> {
     if (taskNodeAdministered) {
-      let submitterAccountResp;
+      let submitterAccountResp
       if (taskType) {
-        submitterAccountResp = await genericHandler('getSubmitterAccount', taskType)
+        submitterAccountResp = await genericHandler(
+          'getSubmitterAccount',
+          taskType,
+        )
       } else {
         submitterAccountResp = await genericHandler('getSubmitterAccount')
       }
@@ -649,7 +652,7 @@ class NamespaceWrapper implements TaskNode {
       if (
         this.testingTaskState!.submissions_audit_trigger[round] &&
         this.testingTaskState!.submissions_audit_trigger[round][
-        candidatePubkey.toBase58()
+          candidatePubkey.toBase58()
         ]
       ) {
         this.testingTaskState!.submissions_audit_trigger[round][
@@ -973,7 +976,7 @@ class NamespaceWrapper implements TaskNode {
       if (
         this.testingTaskState!.distributions_audit_trigger[round] &&
         this.testingTaskState!.distributions_audit_trigger[round][
-        candidatePubkey.toBase58()
+          candidatePubkey.toBase58()
         ]
       ) {
         this.testingTaskState!.distributions_audit_trigger[round][
@@ -1177,8 +1180,8 @@ class NamespaceWrapper implements TaskNode {
       keys =
         keySets.length > 0
           ? [...keySets[0]].filter((key) =>
-            keySets.every((set) => set.has(key)),
-          )
+              keySets.every((set) => set.has(key)),
+            )
           : []
       if (keys.length == 0) {
         console.log('No common keys found in last 3 rounds')
